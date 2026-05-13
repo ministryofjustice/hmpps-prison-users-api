@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Prison UsersAPI
+  version: 1.1.0
+  description: API to hold Prison User data
+
+paths:
+  /migrate/user:
+    post:
+      summary: Migrate a single user from NOMIS into the Prison Users API
+      operationId: migrateUser
+      tags:
+        - Migration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserMigrationRequest'
+      responses:
+        '200':
+          description: Migration completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMigrationResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict (e.g. duplicate user/username)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+components:
+  schemas:
+
+    # ============================
+    # REQUEST
+    # ============================
+
+    UserMigrationRequest:
+      type: object
+      required:
+        - user
+        - accounts
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accounts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/UserAccount'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+        accessibleCaseloads:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAccessibleCaseload'
+
+    # ============================
+    # DOMAIN MODELS
+    # ============================
+
+    User:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - createdTimestamp
+        - createdBy
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "The NOMIS staff ID"
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        status:
+          type: string
+        createdTimestamp:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        modifiedTimestamp:
+          type: string
+          format: date-time
+        modifiedBy:
+          type: string
+
+    UserAccount:
+      type: object
+      required:
+        - username
+        - accountType
+        - accountStatus
+        - createdTimestamp
+        - createdBy
+      properties:
+        username:
+          type: string
+        accountType:
+          type: string
+        accountStatus:
+          type: string
+        lastLoggedIn:
+          type: string
+          format: date-time
+        activeCaseloadId:
+          type: string
+          maxLength: 6
+        createdTimestamp:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        modifiedTimestamp:
+          type: string
+          format: date-time
+        modifiedBy:
+          type: string
+
+    UserRole:
+      type: object
+      required:
+        - username
+        - roleCode
+        - createdTimestamp
+        - createdB
+      properties:
+        username:
+          type: string
+        roleCode:
+          type: string
+        createdTimestamp:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    UserAccessibleCaseload:
+      type: object
+      required:
+        - username
+        - caseloadId
+        - createdTimestamp
+        - createdB
+      properties:
+        username:
+          type: string
+        caseloadId:
+          type: string
+          maxLength: 6
+        createdTimestamp:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    # ============================
+    # RESPONSE
+    # ============================
+
+    UserMigrationResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: "The unique identifier for the migrated user"
+        staffId:
+          type: string
+          description: "The NOMIS staff id for the migrated user"
+        username:
+          type: array
+          minItems: 1
+          description: "The usernames of the accounts for the migrated user"
+          items: 
+            type: string
+    
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        errorCode:
+          type: integer
+          format: int32
+        userMessage:
+          type: string
+        developerMessage:
+          type: string
+      required:
+        - status
