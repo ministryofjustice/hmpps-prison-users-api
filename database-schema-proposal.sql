@@ -15,8 +15,8 @@ CREATE TABLE "user" (
     last_name TEXT,
     status VARCHAR(12),
     legacy_staff_id BIGINT UNIQUE,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
     modified_by TEXT
 );
@@ -45,14 +45,14 @@ CREATE UNIQUE INDEX ux_user_email ON "user"(email);
 CREATE TABLE user_account (
     user_id UUID NOT NULL,
     username TEXT PRIMARY KEY,
-    account_type VARCHAR(12),
-    account_status VARCHAR(32),
+    account_type VARCHAR(12) NOT NULL,
+    account_status VARCHAR(32) NOT NULL,
     last_logged_in TIMESTAMP,
     active_caseload_id VARCHAR(6),
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
-    modified_by TEXT
+    modified_by TEXT,
 -- Delete the user account if the parent user is removed.
     CONSTRAINT fk_user_account_user
         FOREIGN KEY (user_id)
@@ -83,8 +83,8 @@ CREATE TABLE roles (
     role_name VARCHAR(128),
     role_description TEXT,
     admin_type BOOLEAN,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
     modified_by TEXT
 );
@@ -113,8 +113,8 @@ CREATE TABLE caseloads (
     active BOOLEAN,
     administration_caseload BOOLEAN,
     user_assignable BOOLEAN,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
     modified_by TEXT
 );
@@ -123,16 +123,13 @@ COMMENT ON TABLE caseloads IS 'List of caseloads';
 
 COMMENT ON COLUMN caseloads.caseload_id IS 'Unique caseload identifier';
 COMMENT ON COLUMN caseloads.name IS 'Name of the caseload';
-COMMENT ON COLUMN caseloads.active IS 'ndicates if caseload is active';
-COMMENT ON COLUMN caseloads.administration_caseload IS 'Indicates if the csseload is used for user administration';
+COMMENT ON COLUMN caseloads.active IS 'Indicates if caseload is active';
+COMMENT ON COLUMN caseloads.administration_caseload IS 'Indicates if the caseload is used for user administration';
 COMMENT ON COLUMN caseloads.user_assignable IS 'Indicates if the caseload is assignable to users';
 COMMENT ON COLUMN caseloads.created_timestamp IS 'Record creation timestamp';
 COMMENT ON COLUMN caseloads.created_by IS 'Username of creator';
 COMMENT ON COLUMN caseloads.modified_timestamp IS 'Last modification timestamp';
 COMMENT ON COLUMN caseloads.modified_by IS 'Username of last modifier';
-
-CREATE INDEX ix_caseloads_caseload_id ON caseloads(caseload_id);
-
 
 -- ============================================
 -- USER_ROLES
@@ -140,8 +137,8 @@ CREATE INDEX ix_caseloads_caseload_id ON caseloads(caseload_id);
 CREATE TABLE user_roles (
     username TEXT NOT NULL,
     role_code VARCHAR(50) NOT NULL,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
 
     CONSTRAINT pk_user_roles PRIMARY KEY (username, role_code),
 -- Delete the user role link if the user is removed.
@@ -174,8 +171,8 @@ CREATE INDEX ix_user_roles_role_code ON user_roles(role_code);
 CREATE TABLE user_accessible_caseloads (
     username TEXT NOT NULL,
     caseload_id VARCHAR(6) NOT NULL,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
 
     CONSTRAINT pk_user_accessible_caseloads PRIMARY KEY (username, caseload_id),
 -- Delete the user caseload link if the user is removed.
@@ -209,8 +206,8 @@ CREATE TABLE user_caseload_administrators (
     caseload_id VARCHAR(6) NOT NULL,
     active BOOLEAN,
     expiry_date DATE,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
     modified_by TEXT,
 
@@ -251,8 +248,8 @@ CREATE TABLE user_caseload_members (
     start_date DATE,
     expiry_date DATE,
     active BOOLEAN,
-    created_timestamp TIMESTAMP,
-    created_by TEXT,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEX NOT NULL,
     modified_timestamp TIMESTAMP,
     modified_by TEXT,
 
