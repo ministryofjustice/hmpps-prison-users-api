@@ -91,27 +91,41 @@ components:
           type: integer
           format: int64
           description: "The NOMIS staff ID"
+          example: 1234567
         email:
           type: string
+          description: "The email address for the user"
+          example: "test@email.com"
         firstName:
           type: string
+          description: "First name of the user"
+          example: "Joey"
         lastName:
           type: string
+          description: "The last name of the user"
+          example: "Bloggins"
         status:
           type: string
+          description: "The status of the user e.g. ACTIVE/INACTIVE"
           enum:
             - ACTIVE
             - INACTIVE
         createdTimestamp:
           type: string
           format: date-time
+          description: "Record creation timestamp"
         createdBy:
           type: string
+          description: "Username of the record creator"
+          example: "TEST_USER"
         modifiedTimestamp:
           type: string
           format: date-time
+          description: "Record modification timestamp"
         modifiedBy:
           type: string
+          description: "Username of the record modifier"
+          example: "TEST_USER"
 
     UserAccount:
       type: object
@@ -124,13 +138,17 @@ components:
       properties:
         username:
           type: string
+          description: "Username for the user account"
+          example: "TEST_USER"
         accountType:
           type: string
+          description: "The user account type e.g. ADMIN/GENERAL"
           enum:
             - ADMIN
             - GENERAL
         accountStatus:
           type: string
+          description: "The user account status indicating if it is open, locked or expired"
           enum:
             - OPEN
             - EXPIRED
@@ -144,19 +162,28 @@ components:
         lastLoggedIn:
           type: string
           format: date-time
+          description: "The timestamp of the last login for the account"
         activeCaseloadId:
           type: string
           maxLength: 6
+          description: "Identifier for the active caseload for the account"
+          example: "MRI"
         createdTimestamp:
           type: string
           format: date-time
+          description: "Record creation timestamp"
         createdBy:
           type: string
+          description: "Username of the record creator"
+          example: "TEST_USER"
         modifiedTimestamp:
           type: string
           format: date-time
+          description: "Record modification timestamp"
         modifiedBy:
           type: string
+          description: "Username of the record modifier"
+          example: "TEST_USER"
 
     UserRole:
       type: object
@@ -168,13 +195,20 @@ components:
       properties:
         username:
           type: string
+          description: "Username for the user account"
+          example: "TEST_USER"
         roleCode:
           type: string
+          description: "The role code the user account will be assigned"
+          example: "TEST_ROLE"
         createdTimestamp:
           type: string
           format: date-time
+          description: "Record creation timestamp"
         createdBy:
           type: string
+          description: "Username of the record creator"
+          example: "TEST_USER"
 
     UserAccessibleCaseload:
       type: object
@@ -186,14 +220,21 @@ components:
       properties:
         username:
           type: string
+          description: "Username for the user account"
+          example: "TEST_USER"
         caseloadId:
           type: string
           maxLength: 6
+          description: "Identifier for the caseload the user accont can access"
+          example: "MRI"
         createdTimestamp:
           type: string
           format: date-time
+          description: "Record creation timestamp"
         createdBy:
           type: string
+          description: "Username of the record creator"
+          example: "TEST_USER"
 
     # ============================
     # RESPONSE
@@ -206,15 +247,18 @@ components:
           type: string
           format: uuid
           description: "The unique identifier for the migrated user"
+          example: "f59dad25-3f11-4a74-9e03-64d2ee53f498"
         staffId:
           type: string
           description: "The NOMIS staff id for the migrated user"
+          example: 1234567
         username:
           type: array
           minItems: 1
           description: "The usernames of the accounts for the migrated user"
           items: 
             type: string
+          example: ["TEST_USER", "TEST_USER_ADM"]
     
     ErrorResponse:
       type: object
@@ -222,12 +266,20 @@ components:
         status:
           type: integer
           format: int32
+          description: "The HTTP status code"
+          example: 500
         errorCode:
           type: integer
           format: int32
+          description: "The error code."
+          example: 500
         userMessage:
           type: string
+          description: "User friendly error message"
+          example: "An error has occurred"
         developerMessage:
           type: string
+          description: "Developer error message"
+          example: "An internal server error occurred"
       required:
         - status
