@@ -99,6 +99,9 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
         createdTimestamp:
           type: string
           format: date-time
@@ -123,8 +126,21 @@ components:
           type: string
         accountType:
           type: string
+          enum:
+            - ADMIN
+            - GENERAL
         accountStatus:
           type: string
+          enum:
+            - OPEN
+            - EXPIRED
+            - EXPIRED_GRACE
+            - LOCKED_TIMED
+            - LOCKED
+            - EXPIRED_LOCKED_TIMED
+            - EXPIRED_GRACE_LOCKED_TIMED
+            - EXPIRED_LOCKED
+            - EXPIRED_GRACE_LOCKED
         lastLoggedIn:
           type: string
           format: date-time
