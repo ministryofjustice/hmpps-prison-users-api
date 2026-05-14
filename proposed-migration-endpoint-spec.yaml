@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: Prison UsersAPI
-  version: 1.1.0
+  title: Prison Users API
+  version: 1.0.0
   description: API to hold Prison User data
 
 paths:
@@ -148,7 +148,7 @@ components:
         - username
         - roleCode
         - createdTimestamp
-        - createdB
+        - createdBy
       properties:
         username:
           type: string
@@ -166,7 +166,7 @@ components:
         - username
         - caseloadId
         - createdTimestamp
-        - createdB
+        - createdBy
       properties:
         username:
           type: string
