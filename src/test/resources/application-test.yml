@@ -13,3 +13,4 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+    version: 5.32.2
