@@ -11,6 +11,15 @@ dependencies {
   constraints {
     implementation("org.webjars:swagger-ui:5.32.2")
   }
+  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+  implementation("org.springframework.boot:spring-boot-starter-flyway")
+  implementation("org.flywaydb:flyway-core")
+
+  runtimeOnly("com.h2database:h2:2.4.240")
+  developmentOnly("org.springframework.boot:spring-boot-devtools")
+  runtimeOnly("org.postgresql:postgresql:42.7.10")
+  runtimeOnly("org.flywaydb:flyway-database-postgresql")
+
   testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:2.2.0")
   testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
   testImplementation("org.wiremock:wiremock-standalone:3.13.2")

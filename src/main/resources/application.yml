@@ -28,6 +28,16 @@ spring:
     error:
       include-message: always
 
+  datasource:
+    hikari:
+      pool-name: prison-users-api-CP
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      validation-timeout: 5000
+
+  flyway:
+    locations: classpath:db/prison-users
+
 server:
   port: 8080
   servlet:
