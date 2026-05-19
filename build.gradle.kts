@@ -17,7 +17,7 @@ dependencies {
 
   runtimeOnly("com.h2database:h2:2.4.240")
   developmentOnly("org.springframework.boot:spring-boot-devtools")
-  runtimeOnly("org.postgresql:postgresql:42.7.10")
+  runtimeOnly("org.postgresql:postgresql:42.7.11")
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
 
   testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:2.2.0")
