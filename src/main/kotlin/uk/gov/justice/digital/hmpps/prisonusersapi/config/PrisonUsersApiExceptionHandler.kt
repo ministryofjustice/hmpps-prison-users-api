@@ -77,5 +77,5 @@ data class ErrorResponse(
     userMessage: String? = null,
     developerMessage: String? = null,
   ) :
-          this(status.value(), errorCode, userMessage, developerMessage)
+    this(status.value(), errorCode, userMessage, developerMessage)
 }

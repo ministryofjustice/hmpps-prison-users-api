@@ -14,9 +14,8 @@ class UserService(
 ) {
 
   @Transactional(readOnly = true)
-  fun getCaseloads(username: String): UserCaseloadDetail =
-    userAccountRepository.findById(username).orElseThrow(UserNotFoundException("User $username not found"))!!
-      .toUserCaseloadDetail(removeDpsCaseload = true)
+  fun getCaseloads(username: String): UserCaseloadDetail = userAccountRepository.findById(username).orElseThrow(UserNotFoundException("User $username not found"))!!
+    .toUserCaseloadDetail(removeDpsCaseload = true)
 }
 
 class UserNotFoundException(message: String?) :

@@ -14,25 +14,25 @@ import java.io.Serializable
 @Table(name = "user_accessible_caseloads")
 data class UserAccessibleCaseload(
 
-    @EmbeddedId
-    val id: UserAccessibleCaseloadId,
+  @EmbeddedId
+  val id: UserAccessibleCaseloadId,
 
-    @ManyToOne
-    @MapsId("caseloadId")
-    @JoinColumn(name = "caseload_id")
-    val caseload: Caseload,
+  @ManyToOne
+  @MapsId("caseloadId")
+  @JoinColumn(name = "caseload_id")
+  val caseload: Caseload,
 
-    @ManyToOne
-    @MapsId("username")
-    @JoinColumn(name = "username")
-    val userAccount: UserAccount,
+  @ManyToOne
+  @MapsId("username")
+  @JoinColumn(name = "username")
+  val userAccount: UserAccount,
 )
 
 @Embeddable
 data class UserAccessibleCaseloadId(
-    @Column(name = "username")
-    val username: String,
+  @Column(name = "username")
+  val username: String,
 
-    @Column(name = "caseload_id")
-    val caseloadId: String
+  @Column(name = "caseload_id")
+  val caseloadId: String,
 ) : Serializable

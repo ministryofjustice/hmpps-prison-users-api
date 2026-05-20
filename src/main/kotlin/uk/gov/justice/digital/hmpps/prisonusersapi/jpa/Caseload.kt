@@ -11,22 +11,22 @@ const val DPS_CASELOAD = "NWEB"
 @Entity
 @Table(name = "caseloads")
 data class Caseload(
-    @Id
-    @Column(name = "caseload_id", nullable = false)
-    val id: String,
+  @Id
+  @Column(name = "caseload_id", nullable = false)
+  val id: String,
 
-    val name: String,
-    val function: String,
+  val name: String,
+  val function: String,
 ) {
-    fun isDpsCaseload(): Boolean = id == DPS_CASELOAD
+  fun isDpsCaseload(): Boolean = id == DPS_CASELOAD
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
-        other as Caseload
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+    other as Caseload
 
-        return id == other.id
-    }
+    return id == other.id
+  }
 
-    override fun hashCode(): Int = id.hashCode()
+  override fun hashCode(): Int = id.hashCode()
 }
