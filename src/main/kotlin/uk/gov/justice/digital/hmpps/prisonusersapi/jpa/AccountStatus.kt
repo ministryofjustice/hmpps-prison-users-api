@@ -28,7 +28,5 @@ enum class AccountStatus(
     fun get(desc: String): AccountStatus = entries.first { it.desc == desc }
 
     fun activeStatuses() = entries.filter { !(it.isLocked || (it.isExpired && !it.isGracePeriod)) }
-
-    fun inActiveStatuses() = entries.filter { it.isLocked || (it.isExpired && !it.isGracePeriod) }
   }
 }
