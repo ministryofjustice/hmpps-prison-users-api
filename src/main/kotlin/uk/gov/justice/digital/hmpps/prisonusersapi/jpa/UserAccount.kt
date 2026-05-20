@@ -51,7 +51,7 @@ data class UserAccount(
   @OneToOne(optional = true)
   val activeCaseload: Caseload? = null,
 
-  @OneToMany(mappedBy = "username", cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
 ) {
   override fun equals(other: Any?): Boolean {
