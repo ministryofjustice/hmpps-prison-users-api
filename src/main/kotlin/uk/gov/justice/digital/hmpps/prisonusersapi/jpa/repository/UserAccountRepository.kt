@@ -10,5 +10,5 @@ import java.util.Optional
 interface UserAccountRepository : JpaRepository<UserAccount, String> {
 
   @EntityGraph(value = "UserAccount.caseloads", type = EntityGraph.EntityGraphType.LOAD)
-  override fun findById(id: String?): Optional<UserAccount?>
+  override fun findById(id: String): Optional<UserAccount>
 }
