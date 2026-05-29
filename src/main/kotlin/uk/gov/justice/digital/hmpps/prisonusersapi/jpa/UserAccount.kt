@@ -6,7 +6,9 @@ import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
 import jakarta.persistence.NamedAttributeNode
 import jakarta.persistence.NamedEntityGraph
 import jakarta.persistence.NamedSubgraph
@@ -42,6 +44,10 @@ data class UserAccount(
   @Column(name = "username", nullable = false)
   val username: String,
 
+  @OneToOne
+  @JoinColumn(name = "user_id")
+  val user: User,
+
   @Enumerated(EnumType.STRING)
   val accountType: UsageType,
 
@@ -49,10 +55,13 @@ data class UserAccount(
   val accountStatus: AccountStatus,
 
   @OneToOne(optional = true)
+  @JoinColumn(name = "active_caseload_id", updatable = false, insertable = false)
   val activeCaseload: Caseload? = null,
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
+
+  val createdBy: String,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

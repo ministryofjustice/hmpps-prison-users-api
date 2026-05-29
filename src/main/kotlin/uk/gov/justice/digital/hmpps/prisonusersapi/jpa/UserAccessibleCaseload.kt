@@ -26,6 +26,8 @@ data class UserAccessibleCaseload(
   @MapsId("username")
   @JoinColumn(name = "username")
   val userAccount: UserAccount,
+
+  val createdBy: String,
 )
 
 @Embeddable

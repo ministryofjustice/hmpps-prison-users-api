@@ -17,6 +17,7 @@ data class Caseload(
 
   val name: String,
   val function: String,
+  val createdBy: String,
 ) {
   fun isDpsCaseload(): Boolean = id == DPS_CASELOAD
 
