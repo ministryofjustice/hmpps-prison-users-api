@@ -16,142 +16,143 @@ import java.util.UUID
 
 @Component
 class DataBuilder(
-    private val userRepository: UsersRepository,
-    private val userAccountRepository: UserAccountRepository,
-    private val caseloadRepository: CaseloadRepository,
-    private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository) {
-    fun generalUser() = generalUserEntityCreator(
-        userRepository = userRepository,
-        userAccountRepository = userAccountRepository,
-        caseloadRepository = caseloadRepository,
-        userAccessibleCaseloadRepository = userAccessibleCaseloadRepository,
-    )
-
-    fun deleteAll() {
-        userAccessibleCaseloadRepository.deleteAll()
-        userAccountRepository.deleteAll()
-        userRepository.deleteAll()
-        caseloadRepository.deleteAll()
-    }
-}
-
-fun generalUserEntityCreator(
-    userRepository: UsersRepository,
-    userAccountRepository: UserAccountRepository,
-    caseloadRepository: CaseloadRepository,
-    userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
-    userAccount: UserAccount = defaultGeneralUserAccount(),
-    prisonCodes: List<String> = listOf("WWI"),
-): GeneralUserBuilder = GeneralUserBuilder(
-    usersRepository = userRepository,
+  private val userRepository: UsersRepository,
+  private val userAccountRepository: UserAccountRepository,
+  private val caseloadRepository: CaseloadRepository,
+  private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
+) {
+  fun generalUser() = generalUserEntityCreator(
+    userRepository = userRepository,
     userAccountRepository = userAccountRepository,
     caseloadRepository = caseloadRepository,
     userAccessibleCaseloadRepository = userAccessibleCaseloadRepository,
-    userAccount = userAccount,
-    prisonCodes = prisonCodes,
+  )
+
+  fun deleteAll() {
+    userAccessibleCaseloadRepository.deleteAll()
+    userAccountRepository.deleteAll()
+    userRepository.deleteAll()
+    caseloadRepository.deleteAll()
+  }
+}
+
+fun generalUserEntityCreator(
+  userRepository: UsersRepository,
+  userAccountRepository: UserAccountRepository,
+  caseloadRepository: CaseloadRepository,
+  userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
+  userAccount: UserAccount = defaultGeneralUserAccount(),
+  prisonCodes: List<String> = listOf("WWI"),
+): GeneralUserBuilder = GeneralUserBuilder(
+  usersRepository = userRepository,
+  userAccountRepository = userAccountRepository,
+  caseloadRepository = caseloadRepository,
+  userAccessibleCaseloadRepository = userAccessibleCaseloadRepository,
+  userAccount = userAccount,
+  prisonCodes = prisonCodes,
 )
 
 fun defaultGeneralUserAccount(): UserAccount = UserAccount(
-    username = "TEST_USER1",
-    user = defaultUser(),
-    accountType = UsageType.GENERAL,
-    accountStatus = AccountStatus.OPEN,
-    activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
-    userAccessibleCaseloads = mutableListOf(),
-    createdBy = "TEST",
+  username = "TEST_USER1",
+  user = defaultUser(),
+  accountType = UsageType.GENERAL,
+  accountStatus = AccountStatus.OPEN,
+  activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
+  userAccessibleCaseloads = mutableListOf(),
+  createdBy = "TEST",
 )
 
 fun defaultUser(): User = User(
-    userId = UUID.randomUUID(),
-    entraUUID = UUID.randomUUID(),
-    legacyStaffId = 123456,
-    status = "ACTIVE",
-    firstName = "John",
-    lastName = "Smith",
-    email = "john.smith@testing.com",
-    createdBy = "TEST",
+  userId = UUID.randomUUID(),
+  entraUUID = UUID.randomUUID(),
+  legacyStaffId = 123456,
+  status = "ACTIVE",
+  firstName = "John",
+  lastName = "Smith",
+  email = "john.smith@testing.com",
+  createdBy = "TEST",
 )
 
 class GeneralUserBuilder(
-    usersRepository: UsersRepository,
-    userAccountRepository: UserAccountRepository,
-    private val caseloadRepository: CaseloadRepository,
-    userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
-    userAccount: UserAccount,
-    prisonCodes: List<String>,
+  usersRepository: UsersRepository,
+  userAccountRepository: UserAccountRepository,
+  private val caseloadRepository: CaseloadRepository,
+  userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
+  userAccount: UserAccount,
+  prisonCodes: List<String>,
 ) : UserAccountBuilder<GeneralUserBuilder>(
-    userAccountRepository,
-    caseloadRepository,
-    usersRepository,
-    userAccessibleCaseloadRepository,
-    userAccount,
-    prisonCodes,
+  userAccountRepository,
+  caseloadRepository,
+  usersRepository,
+  userAccessibleCaseloadRepository,
+  userAccount,
+  prisonCodes,
 ) {
 
-    override fun build(): GeneralUserBuilder {
-        val caseloads = prisonCodes.map {
-            val caseload = Caseload(it, "Description for $it", "Function for $it", "TEST")
-            UserAccessibleCaseload(
-                UserAccessibleCaseloadId(userAccount.username, it),
-                caseload,
-                userAccount,
-                "TEST"
-            )
-        }.toMutableList()
-        userAccount = userAccount.copy(userAccessibleCaseloads = caseloads)
-        return this
-    }
+  override fun build(): GeneralUserBuilder {
+    val caseloads = prisonCodes.map {
+      val caseload = Caseload(it, "Description for $it", "Function for $it", "TEST")
+      UserAccessibleCaseload(
+        UserAccessibleCaseloadId(userAccount.username, it),
+        caseload,
+        userAccount,
+        "TEST",
+      )
+    }.toMutableList()
+    userAccount = userAccount.copy(userAccessibleCaseloads = caseloads)
+    return this
+  }
 }
 
 abstract class UserAccountBuilder<T>(
-    private val repository: UserAccountRepository,
-    private val caseloadRepository: CaseloadRepository,
-    private val userRepository: UsersRepository,
-    private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
-    internal var userAccount: UserAccount,
-    internal var prisonCodes: List<String>,
+  private val repository: UserAccountRepository,
+  private val caseloadRepository: CaseloadRepository,
+  private val userRepository: UsersRepository,
+  private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
+  internal var userAccount: UserAccount,
+  internal var prisonCodes: List<String>,
 ) {
 
-    fun save(): UserAccount {
-        repository.saveAndFlush(userAccount)
-        return userAccount
-    }
+  fun save(): UserAccount {
+    repository.saveAndFlush(userAccount)
+    return userAccount
+  }
 
-    abstract fun build(): UserAccountBuilder<T>
+  abstract fun build(): UserAccountBuilder<T>
 
-    fun buildAndSave(): UserAccount {
-        build()
-        caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload })
-        userRepository.saveAndFlush(userAccount.user)
-        repository.saveAndFlush(userAccount)
-        return userAccount
-    }
+  fun buildAndSave(): UserAccount {
+    build()
+    caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload })
+    userRepository.saveAndFlush(userAccount.user)
+    repository.saveAndFlush(userAccount)
+    return userAccount
+  }
 
-    fun username(username: String): UserAccountBuilder<T> {
-        this.userAccount = userAccount.copy(username = username)
-        return this
-    }
+  fun username(username: String): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(username = username)
+    return this
+  }
 
-    fun atPrisons(prisonCodes: List<String>): UserAccountBuilder<T> {
-        this.prisonCodes = prisonCodes
-        return this
-    }
+  fun atPrisons(prisonCodes: List<String>): UserAccountBuilder<T> {
+    this.prisonCodes = prisonCodes
+    return this
+  }
 
-    fun atPrisons(vararg prisonCodes: String): UserAccountBuilder<T> = atPrisons(prisonCodes.toList())
-    fun atPrison(prisonCode: String): UserAccountBuilder<T> = atPrisons(prisonCode)
+  fun atPrisons(vararg prisonCodes: String): UserAccountBuilder<T> = atPrisons(prisonCodes.toList())
+  fun atPrison(prisonCode: String): UserAccountBuilder<T> = atPrisons(prisonCode)
 
-    fun firstName(firstName: String): UserAccountBuilder<T> {
-        this.userAccount = userAccount.copy(user = userAccount.user.copy(firstName = firstName))
-        return this
-    }
+  fun firstName(firstName: String): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(user = userAccount.user.copy(firstName = firstName))
+    return this
+  }
 
-    fun lastName(lastName: String): UserAccountBuilder<T> {
-        this.userAccount = userAccount.copy(user = userAccount.user.copy(lastName = lastName))
-        return this
-    }
+  fun lastName(lastName: String): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(user = userAccount.user.copy(lastName = lastName))
+    return this
+  }
 
-    fun email(email: String): UserAccountBuilder<T> {
-        this.userAccount = userAccount.copy(user = userAccount.user.copy(email = email))
-        return this
-    }
+  fun email(email: String): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(user = userAccount.user.copy(email = email))
+    return this
+  }
 }
