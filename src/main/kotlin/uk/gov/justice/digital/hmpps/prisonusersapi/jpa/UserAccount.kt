@@ -54,7 +54,7 @@ data class UserAccount(
   val accountStatus: AccountStatus,
 
   @OneToOne(optional = true)
-  @JoinColumn(name = "active_caseload_id", updatable = false, insertable = false)
+  @JoinColumn(name = "active_caseload_id")
   val activeCaseload: Caseload? = null,
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)

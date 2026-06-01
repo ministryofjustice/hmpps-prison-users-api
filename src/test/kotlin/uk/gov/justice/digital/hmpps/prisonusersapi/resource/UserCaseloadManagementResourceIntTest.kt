@@ -71,8 +71,7 @@ class UserCaseloadManagementResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("username").isEqualTo("CASELOAD_USER1")
-        // TODO set up active caseload in test
-//                .jsonPath("activeCaseload.id").isEqualTo("BXI")
+        .jsonPath("activeCaseload.id").isEqualTo("BXI")
         .jsonPath("$.caseloads[?(@.id == 'NWEB')]").doesNotExist()
         .jsonPath("$.caseloads[?(@.id == 'BXI')]").exists()
         .jsonPath("$.caseloads[?(@.id == 'WWI')]").exists()
@@ -83,8 +82,7 @@ class UserCaseloadManagementResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("username").isEqualTo("CASELOAD_USER1")
-        // TODO set up active caseload in test
-//                .jsonPath("activeCaseload.id").isEqualTo("BXI")
+        .jsonPath("activeCaseload.id").isEqualTo("BXI")
         .jsonPath("$.caseloads[?(@.id == 'NWEB')]").doesNotExist()
         .jsonPath("$.caseloads[?(@.id == 'BXI')]").exists()
         .jsonPath("$.caseloads[?(@.id =='WWI')]").exists()
