@@ -54,6 +54,7 @@ CREATE UNIQUE INDEX ux_roles_role_code ON roles(role_code);
 CREATE TABLE caseloads (
     caseload_id VARCHAR(6) PRIMARY KEY,
     name TEXT,
+    function TEXT,
     active BOOLEAN,
     administration_caseload BOOLEAN,
     user_assignable BOOLEAN,

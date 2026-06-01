@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.config
 
 import jakarta.validation.ValidationException
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
@@ -11,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
 @RestControllerAdvice
@@ -48,6 +50,20 @@ class PrisonUsersApiExceptionHandler {
       ),
     ).also { log.debug("Forbidden (403) returned: {}", e.message) }
 
+  @ExceptionHandler(UserNotFoundException::class)
+  fun handleUserNotFoundException(e: UserNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("User not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = NOT_FOUND,
+          userMessage = "User not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(Exception::class)
   fun handleException(e: Exception): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(INTERNAL_SERVER_ERROR)
@@ -62,4 +78,19 @@ class PrisonUsersApiExceptionHandler {
   private companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
+}
+
+data class ErrorResponse(
+  val status: Int,
+  val errorCode: Int? = null,
+  val userMessage: String? = null,
+  val developerMessage: String? = null,
+) {
+  constructor(
+    status: HttpStatus,
+    errorCode: Int? = null,
+    userMessage: String? = null,
+    developerMessage: String? = null,
+  ) :
+    this(status.value(), errorCode, userMessage, developerMessage)
 }
