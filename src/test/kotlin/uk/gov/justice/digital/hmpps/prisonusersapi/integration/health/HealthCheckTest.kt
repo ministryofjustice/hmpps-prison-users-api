@@ -7,7 +7,6 @@ class HealthCheckTest : IntegrationTestBase() {
 
   @Test
   fun `Health page reports ok`() {
-    stubPingWithResponse(200)
 
     webTestClient.get()
       .uri("/health")
