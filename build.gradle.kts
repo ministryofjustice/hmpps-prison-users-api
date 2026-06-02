@@ -19,7 +19,6 @@ dependencies {
   implementation("org.apache.commons:commons-text:1.15.0")
 
   runtimeOnly("com.h2database:h2:2.4.240")
-  developmentOnly("org.springframework.boot:spring-boot-devtools")
   runtimeOnly("org.postgresql:postgresql:42.7.11")
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
 
