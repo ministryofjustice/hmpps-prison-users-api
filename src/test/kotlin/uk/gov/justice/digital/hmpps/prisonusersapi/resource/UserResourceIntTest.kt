@@ -34,7 +34,7 @@ class UserResourceIntTest : IntegrationTestBase() {
     internal fun deleteUsers() = dataBuilder.deleteAll()
 
     @Test
-    fun `access forbidden when no authority`() {
+    fun `access unauthorized when no authority`() {
       webTestClient.get().uri("/users/basic/marco.rossi")
         .exchange()
         .expectStatus().isUnauthorized
@@ -49,7 +49,7 @@ class UserResourceIntTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `get user forbidden with wrong role`() {
+    fun `access forbidden with wrong role`() {
       webTestClient.get().uri("/users/basic/marco.rossi")
         .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
         .exchange()
