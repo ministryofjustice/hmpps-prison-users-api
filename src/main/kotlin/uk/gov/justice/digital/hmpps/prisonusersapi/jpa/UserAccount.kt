@@ -37,6 +37,15 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
     ),
   ],
 )
+@NamedEntityGraph(
+  name = "UserAccount.withUserAndActiveCaseload",
+  attributeNodes = [
+    NamedAttributeNode("username"),
+    NamedAttributeNode("accountStatus"),
+    NamedAttributeNode("activeCaseload"),
+    NamedAttributeNode("user"),
+  ],
+)
 data class UserAccount(
 
   @Id
@@ -62,6 +71,10 @@ data class UserAccount(
 
   val createdBy: String,
 ) {
+
+  private fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
+  fun isEnabled(): Boolean = !isLocked()
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false

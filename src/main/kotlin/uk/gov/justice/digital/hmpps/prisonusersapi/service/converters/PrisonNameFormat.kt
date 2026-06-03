@@ -5,7 +5,7 @@ import java.util.regex.Pattern
 
 fun String.capitalizeLeavingAbbreviations() = AbbreviationsProcessor.capitalizeLeavingAbbreviations(this)
 
-private fun String.capitalizeFully() = WordUtils.capitalizeFully(this)
+fun String.capitalizeFully(): String = WordUtils.capitalizeFully(this)
 
 object AbbreviationsProcessor {
   internal fun capitalizeLeavingAbbreviations(value: String): String {

@@ -145,6 +145,12 @@ abstract class UserAccountBuilder<T>(
     return this
   }
 
+  fun status(status: AccountStatus): UserAccountBuilder<T> {
+    this.userAccount =
+      userAccount.copy(accountStatus = status)
+    return this
+  }
+
   fun email(email: String): UserAccountBuilder<T> {
     this.userAccount = userAccount.copy(user = userAccount.user.copy(email = email))
     return this
