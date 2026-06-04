@@ -24,56 +24,56 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
 @Validated
 @RequestMapping("/migrate")
 class MigrationResource(
-    private val migrationService: MigrationService
+  private val migrationService: MigrationService,
 ) {
 
-    @PreAuthorize("hasAnyRole('ROLE_NOMIS_MIGRATE')") // TODO what role should this be?
-    @PostMapping("/user")
-    @ResponseStatus(HttpStatus.OK, reason = "User created with associated accounts, role and caseload links from NOMIS")
-    @Operation(
-        summary = "Migrate a single user from NOMIS into Prison Users API, including associated accounts, role and caseload link data",
-        description = "Creates a user. Requires role ROLE_NOMIS_MIGRATE",
-        security = [SecurityRequirement(name = "NOMIS_MIGRATE")],
-        requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
-            content = [
-                Content(
-                    mediaType = "application/json",
-                    schema = Schema(implementation = UserMigrationRequest::class),
-                ),
-            ],
+  @PreAuthorize("hasAnyRole('ROLE_NOMIS_MIGRATE')") // TODO what role should this be?
+  @PostMapping("/user")
+  @ResponseStatus(HttpStatus.OK, reason = "User created with associated accounts, role and caseload links from NOMIS")
+  @Operation(
+    summary = "Migrate a single user from NOMIS into Prison Users API, including associated accounts, role and caseload link data",
+    description = "Creates a user. Requires role ROLE_NOMIS_MIGRATE",
+    security = [SecurityRequirement(name = "NOMIS_MIGRATE")],
+    requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
+      content = [
+        Content(
+          mediaType = "application/json",
+          schema = Schema(implementation = UserMigrationRequest::class),
         ),
-        responses = [
-            ApiResponse(
-                responseCode = "200",
-                description = "User created with associated accounts, role and caseload links from NOMIS",
-            ),
-            ApiResponse(
-                responseCode = "400",
-                description = "Invalid request payload",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "409",
-                description = "Conflict (eg. duplicate user or username)",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "401",
-                description = "Unauthorized to access this endpoint",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "403",
-                description = "Incorrect permissions to create a user",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-        ],
-    )
-    fun migrateUser(
-        @RequestBody @Valid
-        userMigrationRequest: UserMigrationRequest,
-    ): ResponseEntity<UserMigrationResponse> {
-        migrationService.migrateUser(userMigrationRequest)
-        return ResponseEntity.status(HttpStatus.CREATED).build()
-    }
+      ],
+    ),
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User created with associated accounts, role and caseload links from NOMIS",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid request payload",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Conflict (eg. duplicate user or username)",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to create a user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun migrateUser(
+    @RequestBody @Valid
+    userMigrationRequest: UserMigrationRequest,
+  ): ResponseEntity<UserMigrationResponse> {
+    migrationService.migrateUser(userMigrationRequest)
+    return ResponseEntity.status(HttpStatus.CREATED).build()
+  }
 }

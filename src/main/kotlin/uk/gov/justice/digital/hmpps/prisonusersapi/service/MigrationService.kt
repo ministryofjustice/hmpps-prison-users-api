@@ -5,7 +5,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
 
 @Service
 class MigrationService {
-    fun migrateUser(userMigrationRequest: UserMigrationRequest) {
-
-    }
+  fun migrateUser(userMigrationRequest: UserMigrationRequest) {
+  }
 }
