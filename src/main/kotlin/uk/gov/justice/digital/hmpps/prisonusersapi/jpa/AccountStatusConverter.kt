@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.jpa
 
 import jakarta.persistence.AttributeConverter
 import jakarta.persistence.Converter
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 
 @Converter(autoApply = true)
 class AccountStatusConverter : AttributeConverter<AccountStatus, String> {

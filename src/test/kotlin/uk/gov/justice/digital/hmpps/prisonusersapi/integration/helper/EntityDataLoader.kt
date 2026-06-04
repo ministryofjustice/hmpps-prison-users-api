@@ -1,8 +1,8 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper
 
 import org.springframework.stereotype.Component
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload

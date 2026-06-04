@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonusersapi.jpa
+package uk.gov.justice.digital.hmpps.prisonusersapi.data
 
 enum class AccountStatus(
   val code: Int,
