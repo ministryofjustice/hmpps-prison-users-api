@@ -27,13 +27,13 @@ class MigrationResource(
   private val migrationService: MigrationService,
 ) {
 
-  @PreAuthorize("hasAnyRole('ROLE_NOMIS_MIGRATE')") // TODO what role should this be?
+  @PreAuthorize("hasAnyRole('ROLE_PRISON_USERS_API__MIGRATION__RW')")
   @PostMapping("/user")
   @ResponseStatus(HttpStatus.OK, reason = "User created with associated accounts, role and caseload links from NOMIS")
   @Operation(
     summary = "Migrate a single user from NOMIS into Prison Users API, including associated accounts, role and caseload link data",
-    description = "Creates a user. Requires role ROLE_NOMIS_MIGRATE",
-    security = [SecurityRequirement(name = "NOMIS_MIGRATE")],
+    description = "Creates a user. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
+    security = [SecurityRequirement(name = "PRISON_USERS_API__MIGRATION__RW")],
     requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
       content = [
         Content(
