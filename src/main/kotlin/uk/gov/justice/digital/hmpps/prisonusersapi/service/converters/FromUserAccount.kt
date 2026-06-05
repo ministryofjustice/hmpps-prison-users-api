@@ -1,8 +1,8 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service.converters
 
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 
 fun UserAccount.toUserCaseloadDetail(removeDpsCaseload: Boolean = false): UserCaseloadDetail = UserCaseloadDetail(
