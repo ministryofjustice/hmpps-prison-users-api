@@ -29,8 +29,8 @@ data class MigratedUser(
   @Schema(required = true, description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
   val id: Long,
 
-  @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
-  val email: String,
+  @Schema(required = false, description = "The email addresses for the user")
+  val emails: List<MigratedUserEmail>,
 
   @Schema(required = true, description = "First name of the user", type = "string", example = "John")
   val firstName: String,
@@ -40,6 +40,26 @@ data class MigratedUser(
 
   @Schema(required = true, description = "The status of the user e.g. ACTIVE/INACTIVE", type = "string", allowableValues = ["ACTIVE", "INACTIVE"])
   val status: UserStatus,
+
+  @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
+  val createdTimestamp: LocalDateTime,
+
+  @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
+  val createdBy: String,
+
+  @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
+  val modifiedTimestamp: LocalDateTime? = null,
+
+  @Schema(description = "Username of the record modifier", type = "string", example = "TEST_USER")
+  val modifiedBy: String? = null,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "Single NOMIS user email details", type = "object")
+data class MigratedUserEmail(
+
+  @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
+  val email: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val createdTimestamp: LocalDateTime,
