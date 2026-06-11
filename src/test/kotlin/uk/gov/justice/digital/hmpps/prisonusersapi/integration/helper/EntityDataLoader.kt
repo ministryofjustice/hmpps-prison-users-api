@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper
 import org.springframework.stereotype.Component
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
@@ -12,6 +13,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadReposi
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Component
@@ -57,17 +59,18 @@ fun defaultGeneralUserAccount(): UserAccount = UserAccount(
   activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
   userAccessibleCaseloads = mutableListOf(),
   createdBy = "TEST",
+  createdTimestamp = LocalDateTime.now()
 )
 
 fun defaultUser(): User = User(
   userId = UUID.randomUUID(),
   entraUUID = UUID.randomUUID(),
   legacyStaffId = 123456,
-  status = "ACTIVE",
+  status = UserStatus.ACTIVE,
   firstName = "John",
   lastName = "Smith",
-  email = "john.smith@testing.com",
   createdBy = "TEST",
+  createdTimestamp = LocalDateTime.now(),
 )
 
 class GeneralUserBuilder(
@@ -92,6 +95,7 @@ class GeneralUserBuilder(
         caseload,
         userAccount,
         "TEST",
+        createdTimestamp = LocalDateTime.now(),
       )
     }.toMutableList()
     userAccount = userAccount.copy(userAccessibleCaseloads = caseloads, activeCaseload = caseloads[0].caseload)
@@ -148,11 +152,6 @@ abstract class UserAccountBuilder<T>(
   fun status(status: AccountStatus): UserAccountBuilder<T> {
     this.userAccount =
       userAccount.copy(accountStatus = status)
-    return this
-  }
-
-  fun email(email: String): UserAccountBuilder<T> {
-    this.userAccount = userAccount.copy(user = userAccount.user.copy(email = email))
     return this
   }
 }
