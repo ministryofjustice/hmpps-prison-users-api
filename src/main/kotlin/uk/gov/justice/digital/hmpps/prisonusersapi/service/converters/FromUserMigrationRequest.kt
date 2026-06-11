@@ -7,52 +7,49 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmailId
 
-
 fun UserMigrationRequest.toUser(): User {
-    with(this.user) {
-        val user = User(
-            firstName = firstName,
-            lastName = lastName,
-            status = status,
-            legacyStaffId = id,
-            createdTimestamp = createdTimestamp,
-            createdBy = createdBy,
-            modifiedTimestamp = modifiedTimestamp,
-            modifiedBy = modifiedBy,
-        )
+  with(this.user) {
+    val user = User(
+      firstName = firstName,
+      lastName = lastName,
+      status = status,
+      legacyStaffId = id,
+      createdTimestamp = createdTimestamp,
+      createdBy = createdBy,
+      modifiedTimestamp = modifiedTimestamp,
+      modifiedBy = modifiedBy,
+    )
 
-        var isPrimary = true
+    var isPrimary = true
 
-        this.emails?.forEach {
-            user.addUserEmail(
-                UserEmail(
-                    id = UserEmailId(email = it.email),
-                    isPrimary = isPrimary,
-                    createdBy = it.createdBy,
-                    createdTimestamp = it.createdTimestamp,
-                    user = user,
-                )
-            )
+    this.emails?.forEach {
+      user.addUserEmail(
+        UserEmail(
+          id = UserEmailId(email = it.email),
+          isPrimary = isPrimary,
+          createdBy = it.createdBy,
+          createdTimestamp = it.createdTimestamp,
+          user = user,
+        ),
+      )
 
-            isPrimary = false
-        }
-
-        return user
+      isPrimary = false
     }
+
+    return user
+  }
 }
 
-fun UserMigrationRequest.toUserAccounts(user: User, mapToActiveCaseload: (activeCaseloadId: String?, username: String) -> Caseload?): List<UserAccount> {
-    return this.accounts.map { userAccount ->
-        UserAccount(
-            username = userAccount.username,
-            user = user,
-            accountType = userAccount.accountType,
-            accountStatus = userAccount.accountStatus,
-            activeCaseload = mapToActiveCaseload(userAccount.activeCaseloadId, userAccount.username),
-            createdBy = userAccount.createdBy,
-            createdTimestamp = userAccount.createdTimestamp,
-            modifiedBy = userAccount.modifiedBy,
-            modifiedTimestamp = userAccount.modifiedTimestamp,
-        )
-    }
+fun UserMigrationRequest.toUserAccounts(user: User, mapToActiveCaseload: (activeCaseloadId: String?, username: String) -> Caseload?): List<UserAccount> = this.accounts.map { userAccount ->
+  UserAccount(
+    username = userAccount.username,
+    user = user,
+    accountType = userAccount.accountType,
+    accountStatus = userAccount.accountStatus,
+    activeCaseload = mapToActiveCaseload(userAccount.activeCaseloadId, userAccount.username),
+    createdBy = userAccount.createdBy,
+    createdTimestamp = userAccount.createdTimestamp,
+    modifiedBy = userAccount.modifiedBy,
+    modifiedTimestamp = userAccount.modifiedTimestamp,
+  )
 }

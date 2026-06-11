@@ -29,10 +29,10 @@ class MigrationService(
 
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
-
     // Create user
-    if(usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user.id))
+    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user.id)) {
       throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.id} already exists")
+    }
 
     val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
 
@@ -41,8 +41,7 @@ class MigrationService(
     val migratedAccessibleCaseloadsByUsername = userMigrationRequest.accessibleCaseloads?.groupBy { it.username }
 
     // Define mapper from activeCaseloadId to Caseload
-    val toActiveCaseloadMapper: (activeCaseloadId: String?, username: String) -> Caseload? = {
-      activeCaseloadId, username ->
+    val toActiveCaseloadMapper: (activeCaseloadId: String?, username: String) -> Caseload? = { activeCaseloadId, username ->
 
       // Get accessible caseloads for the user
       val userAccessibleCaseloads = migratedAccessibleCaseloadsByUsername?.get(username)
@@ -52,7 +51,7 @@ class MigrationService(
         allCaseloadsById?.get(it.caseloadId)
       }
 
-      if(migratedUserAccessibleCaseload == null) {
+      if (migratedUserAccessibleCaseload == null) {
         // If the active caseload is not found, set it to the first caseload in the list of user-accessible caseloads
         migratedUserAccessibleCaseload = allCaseloadsById?.get(userAccessibleCaseloads?.get(0)?.caseloadId)
       }
@@ -68,15 +67,13 @@ class MigrationService(
       val userRoles = mutableListOf<UserRole>()
       // Group migrated user roles by username
       val migratedRolesByUsername = userMigrationRequest.roles.groupBy { it.username }
-      migratedRolesByUsername.entries.forEach {
-        migratedRolesForUser ->
+      migratedRolesByUsername.entries.forEach { migratedRolesForUser ->
         val userAccount = userAccounts.find { it.username == migratedRolesForUser.key }
-        if(userAccount == null) {
+        if (userAccount == null) {
           throw UserRoleWithoutUserAccountException("User account for username ${migratedRolesForUser.key} not found during user role migration")
         }
 
-        migratedRolesForUser.value.forEach {
-          migratedUserRole ->
+        migratedRolesForUser.value.forEach { migratedUserRole ->
           UserRoleId(userAccount.username, migratedUserRole.roleCode).let {
             userRoles.add(UserRole(it, migratedUserRole.createdBy, migratedUserRole.createdTimestamp))
           }
@@ -91,16 +88,15 @@ class MigrationService(
     userMigrationRequest.accessibleCaseloads?.let {
       val userAccessibleCaseloads = mutableListOf<UserAccessibleCaseload>()
 
-      migratedAccessibleCaseloadsByUsername?.entries?.forEach {
-        migratedAccessibleCaseloadsForUser ->
+      migratedAccessibleCaseloadsByUsername?.entries?.forEach { migratedAccessibleCaseloadsForUser ->
         val userAccount = userAccounts.find { it.username == migratedAccessibleCaseloadsForUser.key }
-        if(userAccount == null) {
+        if (userAccount == null) {
           throw UserAccessibleCaseloadsWithoutUserAccountException("User account for username ${migratedAccessibleCaseloadsForUser.key} not found during user accessible caseload migration")
         }
 
         migratedAccessibleCaseloadsByUsername[userAccount.username]?.forEach { migratedUserAccessibleCaseload ->
-            val caseload = allCaseloadsById?.get(migratedUserAccessibleCaseload.caseloadId)
-                ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
+          val caseload = allCaseloadsById?.get(migratedUserAccessibleCaseload.caseloadId)
+            ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
 
           UserAccessibleCaseloadId(userAccount.username, caseload.id).let {
             userAccessibleCaseloads.add(UserAccessibleCaseload(it, caseload, userAccount, migratedUserAccessibleCaseload.createdBy, migratedUserAccessibleCaseload.createdTimestamp))
@@ -119,14 +115,10 @@ class MigrationService(
   }
 }
 
-class UserRoleWithoutUserAccountException(message: String?) :
-  RuntimeException(message)
+class UserRoleWithoutUserAccountException(message: String?) : RuntimeException(message)
 
-class CaseloadNotFoundException(message: String?) :
-  RuntimeException(message)
+class CaseloadNotFoundException(message: String?) : RuntimeException(message)
 
-class UserAccessibleCaseloadsWithoutUserAccountException(message: String?) :
-  RuntimeException(message)
+class UserAccessibleCaseloadsWithoutUserAccountException(message: String?) : RuntimeException(message)
 
-class UserAlreadyExistsException(message: String?) :
-  RuntimeException(message)
+class UserAlreadyExistsException(message: String?) : RuntimeException(message)

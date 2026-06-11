@@ -10,17 +10,17 @@ import java.io.Serializable
 @Entity
 @Table(name = "user_roles")
 data class UserRole(
-    @EmbeddedId
-    val id: UserRoleId,
-    val createdBy: String,
-    val createdTimestamp: java.time.LocalDateTime,
+  @EmbeddedId
+  val id: UserRoleId,
+  val createdBy: String,
+  val createdTimestamp: java.time.LocalDateTime,
 )
 
 @Embeddable
 data class UserRoleId(
-    @Column(name = "username")
-    val username: String,
+  @Column(name = "username")
+  val username: String,
 
-    @Column(name = "role_code")
-    val roleCode: String,
+  @Column(name = "role_code")
+  val roleCode: String,
 ) : Serializable

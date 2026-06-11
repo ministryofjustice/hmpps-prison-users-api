@@ -34,28 +34,26 @@ class PrisonUsersApiExceptionHandler {
     ).also { logValidationFailureFor(e) }
 
   @ExceptionHandler(UserAccessibleCaseloadsWithoutUserAccountException::class)
-  fun handleUserAccessibleCaseloadsWithoutUserAccountException(e: UserAccessibleCaseloadsWithoutUserAccountException): ResponseEntity<ErrorResponse> =
-    ResponseEntity
-      .status(BAD_REQUEST)
-      .body(
-        ErrorResponse(
-          status = BAD_REQUEST,
-          userMessage = "Validation failure: ${e.message}",
-          developerMessage = e.message,
-        ),
-      ).also { logValidationFailureFor(e) }
+  fun handleUserAccessibleCaseloadsWithoutUserAccountException(e: UserAccessibleCaseloadsWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
 
   @ExceptionHandler(UserRoleWithoutUserAccountException::class)
-  fun handleUserRoleWithoutUserAccountException(e: UserRoleWithoutUserAccountException): ResponseEntity<ErrorResponse> =
-    ResponseEntity
-      .status(BAD_REQUEST)
-      .body(
-        ErrorResponse(
-          status = BAD_REQUEST,
-          userMessage = "Validation failure: ${e.message}",
-          developerMessage = e.message,
-        ),
-      ).also { logValidationFailureFor(e) }
+  fun handleUserRoleWithoutUserAccountException(e: UserRoleWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
 
   @ExceptionHandler(NoResourceFoundException::class)
   fun handleNoResourceFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> = ResponseEntity

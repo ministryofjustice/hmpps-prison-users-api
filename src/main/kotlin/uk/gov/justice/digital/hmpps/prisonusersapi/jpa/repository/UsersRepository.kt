@@ -7,5 +7,5 @@ import java.util.UUID
 
 @Repository
 interface UsersRepository : JpaRepository<User, UUID> {
-    fun existsUsersByLegacyStaffId(id: Long): Boolean
+  fun existsUsersByLegacyStaffId(id: Long): Boolean
 }

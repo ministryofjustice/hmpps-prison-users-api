@@ -16,26 +16,26 @@ import java.util.UUID
 @Entity
 @Table(name = "user_emails")
 data class UserEmail(
-    @EmbeddedId
-    val id: UserEmailId,
+  @EmbeddedId
+  val id: UserEmailId,
 
-    val isPrimary: Boolean,
-    val createdBy: String,
-    val createdTimestamp: LocalDateTime,
-    val modifiedBy: String? = null,
-    val modifiedTimestamp: LocalDateTime? = null,
+  val isPrimary: Boolean,
+  val createdBy: String,
+  val createdTimestamp: LocalDateTime,
+  val modifiedBy: String? = null,
+  val modifiedTimestamp: LocalDateTime? = null,
 
-    @MapsId("userId")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    val user: User,
+  @MapsId("userId")
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  val user: User,
 )
 
 @Embeddable
 data class UserEmailId(
-    @Column(name = "user_id")
-    var userId: UUID? = null,
+  @Column(name = "user_id")
+  var userId: UUID? = null,
 
-    @Column(name = "email")
-    val email: String,
+  @Column(name = "email")
+  val email: String,
 ) : Serializable
