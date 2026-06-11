@@ -74,6 +74,6 @@ class MigrationResource(
     userMigrationRequest: UserMigrationRequest,
   ): ResponseEntity<UserMigrationResponse> {
     migrationService.migrateUser(userMigrationRequest)
-    return ResponseEntity.status(HttpStatus.CREATED).build()
+    return ResponseEntity.status(HttpStatus.OK).build()
   }
 }

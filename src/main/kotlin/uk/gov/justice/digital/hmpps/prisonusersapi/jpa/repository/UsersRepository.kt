@@ -6,4 +6,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import java.util.UUID
 
 @Repository
-interface UsersRepository : JpaRepository<User, UUID>
+interface UsersRepository : JpaRepository<User, UUID> {
+    fun existsUsersByLegacyStaffId(id: Long): Boolean
+}

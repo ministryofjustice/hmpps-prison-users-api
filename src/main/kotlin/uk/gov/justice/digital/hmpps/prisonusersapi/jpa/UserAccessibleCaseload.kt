@@ -9,6 +9,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.Table
 import java.io.Serializable
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "user_accessible_caseloads")
@@ -28,6 +29,7 @@ data class UserAccessibleCaseload(
   val userAccount: UserAccount,
 
   val createdBy: String,
+  val createdTimestamp: LocalDateTime,
 )
 
 @Embeddable

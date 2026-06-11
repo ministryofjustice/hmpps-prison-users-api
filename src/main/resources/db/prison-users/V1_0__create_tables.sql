@@ -3,8 +3,7 @@ CREATE TABLE users
     user_id UUID NOT NULL
         CONSTRAINT user_pk
             PRIMARY KEY,
-    entra_uuid UUID NOT NULL,
-    email TEXT NOT NULL,
+    entra_uuid UUID,
     first_name TEXT,
     last_name TEXT,
     status VARCHAR(12),
@@ -16,7 +15,33 @@ CREATE TABLE users
 );
 
 CREATE UNIQUE INDEX ux_user_entra_uuid ON users(entra_uuid);
-CREATE UNIQUE INDEX ux_user_email ON users(email);
+
+CREATE TABLE user_emails
+(
+    user_id UUID NOT NULL,
+    email TEXT NOT NULL,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL,
+    modified_timestamp TIMESTAMP,
+    modified_by TEXT,
+
+    CONSTRAINT pk_user_emails PRIMARY KEY (user_id, email),
+
+    CONSTRAINT fk_user
+        FOREIGN KEY (user_id)
+            REFERENCES users(user_id)
+            ON DELETE CASCADE
+);
+
+-- Allow only one primary email per user with index
+CREATE UNIQUE INDEX one_primary_email_per_user
+    ON user_emails (user_id)
+    WHERE is_primary = TRUE;
+
+-- Index on user id and email
+CREATE INDEX ux_user_emails_user_id ON user_emails(user_id);
+CREATE UNIQUE INDEX ux_user_emails_email ON user_emails(email);
 
 CREATE TABLE user_account (
     user_id UUID NOT NULL,
@@ -35,18 +60,6 @@ CREATE TABLE user_account (
         FOREIGN KEY (user_id)
             REFERENCES users(user_id)
             ON DELETE CASCADE
-);
-
-CREATE TABLE roles (
-    role_id UUID PRIMARY KEY,
-    role_code VARCHAR(50) UNIQUE,
-    role_name VARCHAR(128),
-    role_description TEXT,
-    admin_type BOOLEAN,
-    created_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL,
-    modified_timestamp TIMESTAMP,
-    modified_by TEXT
 );
 
 CREATE UNIQUE INDEX ux_roles_role_code ON roles(role_code);
@@ -77,12 +90,6 @@ CREATE TABLE user_roles (
         FOREIGN KEY (username)
             REFERENCES user_account(username)
             ON DELETE CASCADE,
-
-    -- Delete the user role link if the role is removed.
-    CONSTRAINT fk_user_roles_role
-        FOREIGN KEY (role_code)
-            REFERENCES roles(role_code)
-            ON DELETE CASCADE
 );
 
 CREATE INDEX ix_user_roles_username ON user_roles(username);
