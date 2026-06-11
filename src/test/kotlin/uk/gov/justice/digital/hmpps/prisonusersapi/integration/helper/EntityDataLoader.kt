@@ -59,7 +59,7 @@ fun defaultGeneralUserAccount(): UserAccount = UserAccount(
   activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
   userAccessibleCaseloads = mutableListOf(),
   createdBy = "TEST",
-  createdTimestamp = LocalDateTime.now()
+  createdTimestamp = LocalDateTime.now(),
 )
 
 fun defaultUser(): User = User(
