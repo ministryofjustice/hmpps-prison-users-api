@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
+import org.hibernate.Hibernate
 import org.hibernate.annotations.UuidGenerator
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import java.time.LocalDateTime
@@ -44,4 +45,14 @@ data class User(
   fun addUserEmail(userEmail: UserEmail) {
     userEmails.add(userEmail)
   }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+    other as User
+
+    return userId == other.userId
+  }
+
+  override fun hashCode(): Int = userId.hashCode()
 }

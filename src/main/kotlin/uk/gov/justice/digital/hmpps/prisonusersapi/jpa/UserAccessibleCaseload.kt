@@ -21,12 +21,12 @@ data class UserAccessibleCaseload(
   @ManyToOne
   @MapsId("caseloadId")
   @JoinColumn(name = "caseload_id")
-  val caseload: Caseload,
+  val caseload: Caseload? = null,
 
   @ManyToOne
   @MapsId("username")
   @JoinColumn(name = "username")
-  val userAccount: UserAccount,
+  val userAccount: UserAccount? = null,
 
   val createdBy: String,
   val createdTimestamp: LocalDateTime,

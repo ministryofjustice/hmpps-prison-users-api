@@ -10,7 +10,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import java.time.LocalDateTime
@@ -21,7 +20,6 @@ class DataBuilder(
   private val userRepository: UsersRepository,
   private val userAccountRepository: UserAccountRepository,
   private val caseloadRepository: CaseloadRepository,
-  private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
 ) {
   fun generalUser() = generalUserEntityCreator(
     userRepository = userRepository,
@@ -30,10 +28,10 @@ class DataBuilder(
   )
 
   fun deleteAll() {
-    userAccessibleCaseloadRepository.deleteAll()
-    userAccountRepository.deleteAll()
     userRepository.deleteAll()
+    userRepository.flush()
     caseloadRepository.deleteAll()
+    caseloadRepository.flush()
   }
 }
 
@@ -63,7 +61,6 @@ fun defaultGeneralUserAccount(): UserAccount = UserAccount(
 )
 
 fun defaultUser(): User = User(
-  userId = UUID.randomUUID(),
   entraUUID = UUID.randomUUID(),
   legacyStaffId = 123456,
   status = UserStatus.ACTIVE,
@@ -120,7 +117,7 @@ abstract class UserAccountBuilder<T>(
 
   fun buildAndSave(): UserAccount {
     build()
-    caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload })
+    caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload!! })
     userRepository.saveAndFlush(userAccount.user)
     userAccountRepository.saveAndFlush(userAccount)
     return userAccount

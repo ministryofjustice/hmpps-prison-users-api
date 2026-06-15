@@ -99,7 +99,7 @@ class MigrationService(
             ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
 
           UserAccessibleCaseloadId(userAccount.username, caseload.id).let {
-            userAccessibleCaseloads.add(UserAccessibleCaseload(it, caseload, userAccount, migratedUserAccessibleCaseload.createdBy, migratedUserAccessibleCaseload.createdTimestamp))
+            userAccessibleCaseloads.add(UserAccessibleCaseload(it, createdBy = migratedUserAccessibleCaseload.createdBy, createdTimestamp =  migratedUserAccessibleCaseload.createdTimestamp))
           }
         }
       }

@@ -35,9 +35,9 @@ CREATE TABLE user_emails
 );
 
 -- Allow only one primary email per user with index
-CREATE UNIQUE INDEX one_primary_email_per_user
-    ON user_emails (user_id)
-    WHERE is_primary = TRUE;
+-- CREATE UNIQUE INDEX one_primary_email_per_user
+--     ON user_emails (user_id)
+--     WHERE is_primary = TRUE;
 
 -- Index on user id and email
 CREATE INDEX ux_user_emails_user_id ON user_emails(user_id);
@@ -61,8 +61,6 @@ CREATE TABLE user_account (
             REFERENCES users(user_id)
             ON DELETE CASCADE
 );
-
-CREATE UNIQUE INDEX ux_roles_role_code ON roles(role_code);
 
 CREATE TABLE caseloads (
     caseload_id VARCHAR(6) PRIMARY KEY,
@@ -89,7 +87,7 @@ CREATE TABLE user_roles (
     CONSTRAINT fk_user_roles_user
         FOREIGN KEY (username)
             REFERENCES user_account(username)
-            ON DELETE CASCADE,
+            ON DELETE CASCADE
 );
 
 CREATE INDEX ix_user_roles_username ON user_roles(username);
