@@ -9,7 +9,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import java.time.LocalDateTime
@@ -19,32 +18,26 @@ import java.util.UUID
 class DataBuilder(
   private val userRepository: UsersRepository,
   private val userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
 ) {
   fun generalUser() = generalUserEntityCreator(
     userRepository = userRepository,
     userAccountRepository = userAccountRepository,
-    caseloadRepository = caseloadRepository,
   )
 
   fun deleteAll() {
     userRepository.deleteAll()
     userRepository.flush()
-    caseloadRepository.deleteAll()
-    caseloadRepository.flush()
   }
 }
 
 fun generalUserEntityCreator(
   userRepository: UsersRepository,
   userAccountRepository: UserAccountRepository,
-  caseloadRepository: CaseloadRepository,
   userAccount: UserAccount = defaultGeneralUserAccount(),
   prisonCodes: List<String> = listOf("WWI"),
 ): GeneralUserBuilder = GeneralUserBuilder(
   usersRepository = userRepository,
   userAccountRepository = userAccountRepository,
-  caseloadRepository = caseloadRepository,
   userAccount = userAccount,
   prisonCodes = prisonCodes,
 )
@@ -73,12 +66,10 @@ fun defaultUser(): User = User(
 class GeneralUserBuilder(
   usersRepository: UsersRepository,
   userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
   userAccount: UserAccount,
   prisonCodes: List<String>,
 ) : UserAccountBuilder<GeneralUserBuilder>(
   userAccountRepository,
-  caseloadRepository,
   usersRepository,
   userAccount,
   prisonCodes,
@@ -102,7 +93,6 @@ class GeneralUserBuilder(
 
 abstract class UserAccountBuilder<T>(
   private val userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
   private val userRepository: UsersRepository,
   internal var userAccount: UserAccount,
   internal var prisonCodes: List<String>,
@@ -117,7 +107,6 @@ abstract class UserAccountBuilder<T>(
 
   fun buildAndSave(): UserAccount {
     build()
-    caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload!! })
     userRepository.saveAndFlush(userAccount.user)
     userAccountRepository.saveAndFlush(userAccount)
     return userAccount
