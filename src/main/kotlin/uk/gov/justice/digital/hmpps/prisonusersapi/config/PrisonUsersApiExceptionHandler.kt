@@ -8,11 +8,15 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
+import org.springframework.validation.FieldError
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.CaseloadNotFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloadsWithoutUserAccountException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
@@ -91,6 +95,20 @@ class PrisonUsersApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CaseloadNotFoundException::class)
+  fun caseloadNotFoundException(e: CaseloadNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Caseload not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = NOT_FOUND,
+          userMessage = "Caseload not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(UserAlreadyExistsException::class)
   fun handleUserAlreadyExistsException(e: UserAlreadyExistsException): ResponseEntity<ErrorResponse> {
     log.debug("User already exists exception caught: {}", e.message)
@@ -115,6 +133,28 @@ class PrisonUsersApiExceptionHandler {
         developerMessage = e.message,
       ),
     ).also { log.error("Unexpected exception", e) }
+
+
+  @ExceptionHandler(MethodArgumentNotValidException::class)
+  fun handleMethodArgumentNotValidException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+    log.info("Validation exception: {}", e.message)
+    val errors = e.allErrors.mapNotNull {
+      when (it) {
+        is FieldError -> "${it.field} ${it.defaultMessage}"
+        else -> it.defaultMessage
+      }
+    }.sortedBy { it }
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .contentType(APPLICATION_JSON)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          userMessage = "Validation failure: ${errors.joinToString(", ")}",
+          developerMessage = e.message,
+        ),
+      )
+  }
 
   private fun logValidationFailureFor(e: Exception) = log.info("Validation failure: ${e.message}")
 

@@ -11,9 +11,9 @@ fun UserAccount.toUserCaseloadDetail(removeDpsCaseload: Boolean = false): UserCa
   active = AccountStatus.activeStatuses().contains(this.accountStatus),
   accountType = this.accountType,
   caseloads = this.userAccessibleCaseloads
-    .filterNot { (removeDpsCaseload && it.caseload!!.isDpsCaseload()) }
+    .filterNot { (removeDpsCaseload && it.caseload.isDpsCaseload()) }
     .map { uc ->
-      uc.caseload!!.toPrisonCaseload()
+      uc.caseload.toPrisonCaseload()
     },
 )
 

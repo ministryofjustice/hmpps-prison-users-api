@@ -30,8 +30,8 @@ class MigrationService(
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
     // Create user
-    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user.id)) {
-      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.id} already exists")
+    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user?.id!!)) {
+      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user!!.id} already exists")
     }
 
     val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
@@ -47,16 +47,16 @@ class MigrationService(
       val userAccessibleCaseloads = migratedAccessibleCaseloadsByUsername?.get(username)
 
       // Find the active caseload
-      var migratedUserAccessibleCaseload = userAccessibleCaseloads?.find { it.caseloadId == activeCaseloadId }?.let {
+      var activeCaseload = userAccessibleCaseloads?.find { it.caseloadId == activeCaseloadId }?.let {
         allCaseloadsById?.get(it.caseloadId)
       }
 
-      if (migratedUserAccessibleCaseload == null) {
+      if (activeCaseload == null) {
         // If the active caseload is not found, set it to the first caseload in the list of user-accessible caseloads
-        migratedUserAccessibleCaseload = allCaseloadsById?.get(userAccessibleCaseloads?.get(0)?.caseloadId)
+        activeCaseload = allCaseloadsById?.get(userAccessibleCaseloads?.get(0)?.caseloadId)
       }
 
-      migratedUserAccessibleCaseload
+      activeCaseload
     }
 
     // 2. Create user accounts
@@ -74,8 +74,8 @@ class MigrationService(
         }
 
         migratedRolesForUser.value.forEach { migratedUserRole ->
-          UserRoleId(userAccount.username, migratedUserRole.roleCode).let {
-            userRoles.add(UserRole(it, migratedUserRole.createdBy, migratedUserRole.createdTimestamp))
+          UserRoleId(userAccount.username, migratedUserRole.roleCode!!).let {
+            userRoles.add(UserRole(it, migratedUserRole.createdBy!!, migratedUserRole.createdTimestamp!!))
           }
         }
       }
@@ -99,7 +99,7 @@ class MigrationService(
             ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
 
           UserAccessibleCaseloadId(userAccount.username, caseload.id).let {
-            userAccessibleCaseloads.add(UserAccessibleCaseload(it, createdBy = migratedUserAccessibleCaseload.createdBy, createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp))
+            userAccessibleCaseloads.add(UserAccessibleCaseload(it, caseload = caseload, userAccount = userAccount, createdBy = migratedUserAccessibleCaseload.createdBy!!, createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp!!))
           }
         }
       }
@@ -110,7 +110,7 @@ class MigrationService(
   }
 
   private fun loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest: UserMigrationRequest): Map<String, Caseload>? {
-    val allCaseloadIds = userMigrationRequest.accessibleCaseloads?.map { it.caseloadId }?.toSet()
+    val allCaseloadIds = userMigrationRequest.accessibleCaseloads?.map { it.caseloadId!! }?.toSet()
     return allCaseloadIds?.let { caseloadRepository.findAllById(allCaseloadIds).associateBy { it.id } }
   }
 }

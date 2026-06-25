@@ -10,6 +10,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
+  implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
   constraints {
     implementation("org.webjars:swagger-ui:5.32.2")
   }
@@ -17,6 +18,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-flyway")
   implementation("org.flywaydb:flyway-core")
   implementation("org.apache.commons:commons-text:1.15.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
   runtimeOnly("com.h2database:h2:2.4.240")
   runtimeOnly("org.postgresql:postgresql:42.7.11")

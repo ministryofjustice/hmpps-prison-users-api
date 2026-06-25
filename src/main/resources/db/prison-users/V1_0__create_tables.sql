@@ -34,11 +34,6 @@ CREATE TABLE user_emails
             ON DELETE CASCADE
 );
 
--- Allow only one primary email per user with index
--- CREATE UNIQUE INDEX one_primary_email_per_user
---     ON user_emails (user_id)
---     WHERE is_primary = TRUE;
-
 -- Index on user id and email
 CREATE INDEX ux_user_emails_user_id ON user_emails(user_id);
 CREATE UNIQUE INDEX ux_user_emails_email ON user_emails(email);
