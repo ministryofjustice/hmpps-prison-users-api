@@ -398,6 +398,26 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     }
 
     @Test
+    fun requestWithNoUserAccounts() {
+      val request: Map<String, Any?> = mapOf(
+        "user" to migratedUser(),
+        "accounts" to null,
+        "roles" to null,
+        "accessibleCaseloads" to null,
+      )
+
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isOk
+
+      val allUsers = userRepository.findAll()
+      assertTrue { allUsers.size == 1 }
+      assertTrue { allUsers[0].legacyStaffId == (request["user"] as MigratedUser).id }
+    }
+
+    @Test
     fun requestWithNoUserInvalid() {
       val request: Map<String, Any?> = mapOf(
         "user" to null,
@@ -419,30 +439,6 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectBody()
         .jsonPath("userMessage")
         .isEqualTo("Validation failure: user Expected one 'user'")
-    }
-
-    @Test
-    fun requestWithNoUserAccountsInvalid() {
-      val request: Map<String, Any?> = mapOf(
-        "user" to migratedUser(),
-        "accounts" to emptyList<MigratedUserAccount>(),
-        "roles" to listOf(userRole(username = "testy", roleCode = "ROLE_BANANAS"), userRole(username = "testy-1", roleCode = "ROLE_STRAWBERRIES")),
-        "accessibleCaseloads" to listOf(
-          accessibleCaseload(username = "testy", caseloadId = "MDI"),
-          accessibleCaseload(username = "testy", caseloadId = "LEI"),
-          accessibleCaseload(username = "testy-1", caseloadId = "MDI"),
-          accessibleCaseload(username = "testy-1", caseloadId = "LEI"),
-        ),
-      )
-
-      webTestClient.post().uri("/migrate/user")
-        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .bodyValue(request)
-        .exchange()
-        .expectStatus().isBadRequest
-        .expectBody()
-        .jsonPath("userMessage")
-        .isEqualTo("Validation failure: accounts Expected at least one 'user account'")
     }
 
     @Test

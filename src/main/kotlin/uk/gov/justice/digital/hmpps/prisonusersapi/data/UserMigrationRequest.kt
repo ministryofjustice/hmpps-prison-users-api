@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.data
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
-import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import java.time.LocalDateTime
 
@@ -15,10 +14,9 @@ data class UserMigrationRequest(
   @field:Valid
   var user: MigratedUser? = null,
 
-  @Schema(required = true, description = "The NOMIS user accounts to migrate")
-  @field:NotEmpty(message = "Expected at least one 'user account'")
+  @Schema(description = "The NOMIS user accounts to migrate")
   @field:Valid
-  var accounts: List<MigratedUserAccount> = emptyList(),
+  val accounts: List<MigratedUserAccount>?,
 
   @Schema(description = "Links between the user (via user account) and roles")
   @field:Valid

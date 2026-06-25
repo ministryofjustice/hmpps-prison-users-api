@@ -40,7 +40,7 @@ fun UserMigrationRequest.toUser(): User {
   }
 }
 
-fun UserMigrationRequest.toUserAccounts(user: User, mapToActiveCaseload: (activeCaseloadId: String?, username: String) -> Caseload?): List<UserAccount> = this.accounts.map { userAccount ->
+fun UserMigrationRequest.toUserAccounts(user: User, mapToActiveCaseload: (activeCaseloadId: String?, username: String) -> Caseload?): List<UserAccount>? = this.accounts?.map { userAccount ->
   UserAccount(
     username = userAccount.username!!,
     user = user,
