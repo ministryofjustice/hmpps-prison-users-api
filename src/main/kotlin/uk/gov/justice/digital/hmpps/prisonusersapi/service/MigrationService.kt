@@ -29,43 +29,34 @@ class MigrationService(
 
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
-    // Create user
     if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user?.id!!)) {
       throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user!!.id} already exists")
     }
 
     val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
 
-    // Load all caseloads by id and group migrated accessible caseloads by username
     val allCaseloadsById = loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest)
     val migratedAccessibleCaseloadsByUsername = userMigrationRequest.accessibleCaseloads?.groupBy { it.username }
 
-    // Define mapper from activeCaseloadId to Caseload
     val toActiveCaseloadMapper: (activeCaseloadId: String?, username: String) -> Caseload? = { activeCaseloadId, username ->
 
-      // Get accessible caseloads for the user
       val userAccessibleCaseloads = migratedAccessibleCaseloadsByUsername?.get(username)
 
-      // Find the active caseload
       var activeCaseload = userAccessibleCaseloads?.find { it.caseloadId == activeCaseloadId }?.let {
         allCaseloadsById?.get(it.caseloadId)
       }
 
       if (activeCaseload == null) {
-        // If the active caseload is not found, set it to the first caseload in the list of user-accessible caseloads
         activeCaseload = allCaseloadsById?.get(userAccessibleCaseloads?.get(0)?.caseloadId)
       }
 
       activeCaseload
     }
 
-    // 2. Create user accounts
     val userAccounts = userAccountRepository.saveAllAndFlush<UserAccount>(userMigrationRequest.toUserAccounts(user, toActiveCaseloadMapper))
 
-    // 3. Create user roles
     userMigrationRequest.roles?.let {
       val userRoles = mutableListOf<UserRole>()
-      // Group migrated user roles by username
       val migratedRolesByUsername = userMigrationRequest.roles.groupBy { it.username }
       migratedRolesByUsername.entries.forEach { migratedRolesForUser ->
         val userAccount = userAccounts.find { it.username == migratedRolesForUser.key }
@@ -82,8 +73,6 @@ class MigrationService(
 
       userRoleRepository.saveAll(userRoles)
     }
-
-    // 4. Create user caseloads
 
     userMigrationRequest.accessibleCaseloads?.let {
       val userAccessibleCaseloads = mutableListOf<UserAccessibleCaseload>()

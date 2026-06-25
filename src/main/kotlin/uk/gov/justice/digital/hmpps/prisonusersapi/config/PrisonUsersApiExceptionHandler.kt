@@ -134,7 +134,6 @@ class PrisonUsersApiExceptionHandler {
       ),
     ).also { log.error("Unexpected exception", e) }
 
-
   @ExceptionHandler(MethodArgumentNotValidException::class)
   fun handleMethodArgumentNotValidException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
     log.info("Validation exception: {}", e.message)
