@@ -21,7 +21,7 @@ fun UserMigrationRequest.toUser(): User {
     )
 
     var primaryEmail: String? = this.emails?.firstOrNull { it.email?.endsWith("@justice.gov.uk") ?: false }?.email
-    if(primaryEmail == null) {
+    if (primaryEmail == null) {
       primaryEmail = this.emails?.first()?.email
     }
 
