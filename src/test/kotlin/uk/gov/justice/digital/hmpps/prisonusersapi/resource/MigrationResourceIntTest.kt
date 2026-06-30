@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
 import org.apache.http.HttpStatus
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -340,6 +341,56 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     }
 
     @Test
+    fun multipleEmailsWithJustice() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(emails = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test@justice.gov.uk"))),
+              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI"), userAccount(username = "testy-1", activeCaseloadId = "LEI")),
+              roles = null,
+              accessibleCaseloads = null,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(migratedUser().id)
+
+      val emailsByUserId = userEmailsRepository.findAll().groupBy { it.id.userId }
+      val firstEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@email.com" }
+      val secondEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@justice.gov.uk" }
+      assertTrue { secondEmail?.isPrimary!! }
+      assertFalse { firstEmail?.isPrimary!! }
+    }
+
+    @Test
+    fun noEmails() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(emails = null),
+              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI"), userAccount(username = "testy-1", activeCaseloadId = "LEI")),
+              roles = null,
+              accessibleCaseloads = null,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(migratedUser().id)
+
+      assertTrue { userEmailsRepository.findAll().isEmpty() }
+    }
+
+    @Test
     fun completeRequestAndResponse() {
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
@@ -395,6 +446,11 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       val emailsByUserId = userEmailsRepository.findAll().groupBy { it.id.userId }
       assertTrue { emailsByUserId.size == 1 }
       assertTrue { emailsByUserId.entries.flatMap { it.value }.map { it.id.email }.containsAll<Any>(listOf("test@email.com", "test-2@email.com")) }
+
+      val firstEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@email.com" }
+      val secondEmail = emailsByUserId.entries.first().value.find { it.id.email == "test-2@email.com" }
+      assertTrue { firstEmail?.isPrimary!! }
+      assertFalse { secondEmail?.isPrimary!! }
     }
 
     @Test
@@ -584,9 +640,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       createdBy = "TEST_USER",
     )
 
-    private fun migratedUser() = MigratedUser(
+    private fun migratedUser(emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com"))) = MigratedUser(
       id = Long.MAX_VALUE,
-      emails = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com")),
+      emails = emails,
       firstName = "Test",
       lastName = "User",
       status = UserStatus.ACTIVE,

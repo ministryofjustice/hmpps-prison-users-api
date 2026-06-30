@@ -21,7 +21,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloa
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserRoleWithoutUserAccountException
-import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
 @RestControllerAdvice
 class PrisonUsersApiExceptionHandler {

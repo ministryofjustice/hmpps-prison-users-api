@@ -54,5 +54,5 @@ data class User(
     return userId == other.userId
   }
 
-  override fun hashCode(): Int = userId.hashCode()
+  override fun hashCode(): Int = userId?.hashCode() ?: 0
 }

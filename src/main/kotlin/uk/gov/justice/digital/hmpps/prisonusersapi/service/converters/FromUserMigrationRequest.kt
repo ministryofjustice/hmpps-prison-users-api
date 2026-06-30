@@ -20,20 +20,21 @@ fun UserMigrationRequest.toUser(): User {
       modifiedBy = modifiedBy,
     )
 
-    var isPrimary = true
+    var primaryEmail: String? = this.emails?.firstOrNull { it.email?.endsWith("@justice.gov.uk") ?: false }?.email
+    if(primaryEmail == null) {
+      primaryEmail = this.emails?.first()?.email
+    }
 
     this.emails?.forEach {
       user.addUserEmail(
         UserEmail(
           id = UserEmailId(email = it.email!!),
-          isPrimary = isPrimary,
+          isPrimary = it.email == primaryEmail,
           createdBy = it.createdBy!!,
           createdTimestamp = it.createdTimestamp!!,
           user = user,
         ),
       )
-
-      isPrimary = false
     }
 
     return user
