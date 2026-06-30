@@ -31,7 +31,9 @@ class UserResourceIntTest : IntegrationTestBase() {
     }
 
     @AfterEach
-    internal fun deleteUsers() = dataBuilder.deleteAll()
+    internal fun deleteUsers() {
+      dataBuilder.deleteAll()
+    }
 
     @Test
     fun `access unauthorized when no authority`() {

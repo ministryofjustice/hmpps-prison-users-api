@@ -3,48 +3,41 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper
 import org.springframework.stereotype.Component
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Component
 class DataBuilder(
   private val userRepository: UsersRepository,
   private val userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
-  private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
 ) {
   fun generalUser() = generalUserEntityCreator(
     userRepository = userRepository,
     userAccountRepository = userAccountRepository,
-    caseloadRepository = caseloadRepository,
   )
 
   fun deleteAll() {
-    userAccessibleCaseloadRepository.deleteAll()
-    userAccountRepository.deleteAll()
     userRepository.deleteAll()
-    caseloadRepository.deleteAll()
+    userRepository.flush()
   }
 }
 
 fun generalUserEntityCreator(
   userRepository: UsersRepository,
   userAccountRepository: UserAccountRepository,
-  caseloadRepository: CaseloadRepository,
   userAccount: UserAccount = defaultGeneralUserAccount(),
   prisonCodes: List<String> = listOf("WWI"),
 ): GeneralUserBuilder = GeneralUserBuilder(
   usersRepository = userRepository,
   userAccountRepository = userAccountRepository,
-  caseloadRepository = caseloadRepository,
   userAccount = userAccount,
   prisonCodes = prisonCodes,
 )
@@ -57,28 +50,26 @@ fun defaultGeneralUserAccount(): UserAccount = UserAccount(
   activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
   userAccessibleCaseloads = mutableListOf(),
   createdBy = "TEST",
+  createdTimestamp = LocalDateTime.now(),
 )
 
 fun defaultUser(): User = User(
-  userId = UUID.randomUUID(),
   entraUUID = UUID.randomUUID(),
   legacyStaffId = 123456,
-  status = "ACTIVE",
+  status = UserStatus.ACTIVE,
   firstName = "John",
   lastName = "Smith",
-  email = "john.smith@testing.com",
   createdBy = "TEST",
+  createdTimestamp = LocalDateTime.now(),
 )
 
 class GeneralUserBuilder(
   usersRepository: UsersRepository,
   userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
   userAccount: UserAccount,
   prisonCodes: List<String>,
 ) : UserAccountBuilder<GeneralUserBuilder>(
   userAccountRepository,
-  caseloadRepository,
   usersRepository,
   userAccount,
   prisonCodes,
@@ -92,6 +83,7 @@ class GeneralUserBuilder(
         caseload,
         userAccount,
         "TEST",
+        createdTimestamp = LocalDateTime.now(),
       )
     }.toMutableList()
     userAccount = userAccount.copy(userAccessibleCaseloads = caseloads, activeCaseload = caseloads[0].caseload)
@@ -101,7 +93,6 @@ class GeneralUserBuilder(
 
 abstract class UserAccountBuilder<T>(
   private val userAccountRepository: UserAccountRepository,
-  private val caseloadRepository: CaseloadRepository,
   private val userRepository: UsersRepository,
   internal var userAccount: UserAccount,
   internal var prisonCodes: List<String>,
@@ -116,7 +107,6 @@ abstract class UserAccountBuilder<T>(
 
   fun buildAndSave(): UserAccount {
     build()
-    caseloadRepository.saveAllAndFlush<Caseload>(userAccount.userAccessibleCaseloads.map { it.caseload })
     userRepository.saveAndFlush(userAccount.user)
     userAccountRepository.saveAndFlush(userAccount)
     return userAccount
@@ -148,11 +138,6 @@ abstract class UserAccountBuilder<T>(
   fun status(status: AccountStatus): UserAccountBuilder<T> {
     this.userAccount =
       userAccount.copy(accountStatus = status)
-    return this
-  }
-
-  fun email(email: String): UserAccountBuilder<T> {
-    this.userAccount = userAccount.copy(user = userAccount.user.copy(email = email))
     return this
   }
 }

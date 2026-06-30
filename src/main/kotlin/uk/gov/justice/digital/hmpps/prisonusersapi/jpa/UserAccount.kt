@@ -17,6 +17,7 @@ import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "user_account")
@@ -70,7 +71,11 @@ data class UserAccount(
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
 
+  val createdTimestamp: LocalDateTime,
   val createdBy: String,
+
+  val modifiedTimestamp: LocalDateTime? = null,
+  val modifiedBy: String? = null,
 ) {
 
   private fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
