@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
-import   org.apache.http.HttpStatus
+import org.apache.http.HttpStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
