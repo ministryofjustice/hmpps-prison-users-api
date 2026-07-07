@@ -13,7 +13,7 @@ fun UserMigrationRequest.toUser(): User {
       firstName = firstName!!,
       lastName = lastName!!,
       status = status!!,
-      legacyStaffId = id!!,
+      legacyStaffId = staffId!!,
       createdTimestamp = createdTimestamp!!,
       createdBy = createdBy!!,
       modifiedTimestamp = modifiedTimestamp,

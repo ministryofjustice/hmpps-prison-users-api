@@ -30,8 +30,8 @@ class MigrationService(
 
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
-    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user?.id!!)) {
-      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user!!.id} already exists")
+    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user?.staffId!!)) {
+      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user!!.staffId} already exists")
     }
 
     val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
@@ -54,10 +54,8 @@ class MigrationService(
         }
 
         migratedUserAccessibleCaseloadsForUsername.let { migratedUserAccessibleCaseloads ->
-          if (migratedUserAccessibleCaseloads.isNotEmpty()) {
-            val migratedUserAccessibleCaseload = migratedUserAccessibleCaseloads.find { it.caseloadId == activeCaseloadId }
-            if (migratedUserAccessibleCaseload == null) throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found in user accessible caseloads for user $username")
-          }
+          val migratedUserAccessibleCaseload = migratedUserAccessibleCaseloads.find { it.caseloadId == activeCaseloadId }
+          if (migratedUserAccessibleCaseload == null) throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found in user accessible caseloads for user $username")
         }
 
         activeCaseload

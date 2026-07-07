@@ -181,7 +181,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isEqualTo(HttpStatus.SC_CONFLICT)
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("User already exists: User with legacy staff id ${userMigrationRequest.user!!.id} already exists")
+        .isEqualTo("User already exists: User with legacy staff id ${userMigrationRequest.user!!.staffId} already exists")
     }
 
     @Test
@@ -412,7 +412,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("$.userId").isNotEmpty
-        .jsonPath("$.staffId").isEqualTo(migratedUser().id)
+        .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
       val emailsByUserId = userEmailsRepository.findAll().groupBy { it.id.userId }
       val firstEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@email.com" }
@@ -439,7 +439,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("$.userId").isNotEmpty
-        .jsonPath("$.staffId").isEqualTo(migratedUser().id)
+        .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
       assertTrue { userEmailsRepository.findAll().isEmpty() }
     }
@@ -467,7 +467,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("$.userId").isNotEmpty
-        .jsonPath("$.staffId").isEqualTo(migratedUser().id)
+        .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
       val testy11UserAccount = userAccountRepository.findByUsername("testy")
       val testy12UserAccount = userAccountRepository.findByUsername("testy-1")
@@ -524,7 +524,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
 
       val allUsers = userRepository.findAll()
       assertTrue { allUsers.size == 1 }
-      assertTrue { allUsers[0].legacyStaffId == (request["user"] as MigratedUser).id }
+      assertTrue { allUsers[0].legacyStaffId == (request["user"] as MigratedUser).staffId }
     }
 
     @Test
@@ -574,7 +574,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isBadRequest
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("Validation failure: user.createdBy Expected created by, user.createdTimestamp Expected created timestamp, user.firstName Expected first name, user.id Expected user id, user.lastName Expected last name, user.status Expected user status")
+        .isEqualTo("Validation failure: user.createdBy Expected created by, user.createdTimestamp Expected created timestamp, user.firstName Expected first name, user.lastName Expected last name, user.staffId Expected staff id, user.status Expected user status")
     }
 
     @Test
@@ -631,7 +631,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isBadRequest
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("Validation failure: user.emails[0].createdBy Expected created by, user.emails[0].createdTimestamp Expected created timestamp, user.emails[0].email Expected email address")
+        .isEqualTo("Validation failure: user.emails[0].createdBy Expected created by, user.emails[0].createdTimestamp Expected created timestamp, user.emails[0].email Expected email address, user.staffId Expected staff id")
     }
 
     @Test
@@ -695,7 +695,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     )
 
     private fun migratedUser(emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com"))) = MigratedUser(
-      id = Long.MAX_VALUE,
+      staffId = Long.MAX_VALUE,
       emails = emails,
       firstName = "Test",
       lastName = "User",

@@ -31,8 +31,8 @@ data class UserMigrationRequest(
 @Schema(description = "Single NOMIS user details", type = "object")
 data class MigratedUser(
   @Schema(required = true, description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
-  @field:NotNull(message = "Expected user id")
-  var id: Long? = null,
+  @field:NotNull(message = "Expected staff id")
+  var staffId: Long? = null,
 
   @Schema(required = false, description = "The email addresses for the user")
   @field:Valid
