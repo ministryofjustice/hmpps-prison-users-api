@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
-import org.apache.http.HttpStatus
+import   org.apache.http.HttpStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -110,7 +110,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     }
 
     @Test
-    fun accessibleCaseloadNotFound() {
+    fun unrecognisedAccessibleCaseload() {
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
         .body(
@@ -125,15 +125,39 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         )
         .exchange()
         .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Caseload not found: Caseload(s) [NOT_A_CASELOAD] not found")
+    }
+
+    @Test
+    fun activeCaseloadNotPresentInUserAccessibleCaseloads() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(),
+              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "LEI")),
+              roles = null,
+              accessibleCaseloads = listOf(accessibleCaseload("testy", "MDI")),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload LEI not found for user testy")
     }
 
     @Test
     fun userAlreadyExists() {
       val userMigrationRequest = UserMigrationRequest(
         user = migratedUser(),
-        accounts = listOf(userAccount()),
+        accounts = listOf(userAccount(username = "testy")),
         roles = null,
-        accessibleCaseloads = null,
+        accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
       )
 
       webTestClient.post().uri("/migrate/user")
@@ -177,57 +201,13 @@ class MigrationResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isOk
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Caseload not found: Active caseload NOT_A_CASELOAD not found for user testy")
 
       val optionalUserAccount = userAccountRepository.findByUsername("testy")
-      assertTrue(optionalUserAccount.isPresent)
-      assertTrue { optionalUserAccount.get().activeCaseload == null }
-    }
-
-    @Test
-    fun activeCaseloadNotFoundAndUserAccessibleCaseloadsPresent() {
-      webTestClient.post().uri("/migrate/user")
-        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            UserMigrationRequest(
-              user = migratedUser(),
-              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "NOT_A_CASELOAD")),
-              roles = null,
-              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI"), accessibleCaseload(username = "testy", caseloadId = "LEI")),
-            ),
-          ),
-        )
-        .exchange()
-        .expectStatus().isOk
-
-      val optionalUserAccount = userAccountRepository.findByUsername("testy")
-      assertTrue(optionalUserAccount.isPresent)
-      assertNotNull(optionalUserAccount.get().activeCaseload)
-      assertTrue { optionalUserAccount.get().activeCaseload?.id == "MDI" }
-    }
-
-    @Test
-    fun activeCaseloadIdSetAndFound() {
-      webTestClient.post().uri("/migrate/user")
-        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            UserMigrationRequest(
-              user = migratedUser(),
-              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
-              roles = null,
-              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
-            ),
-          ),
-        )
-        .exchange()
-        .expectStatus().isOk
-
-      val optionalUserAccount = userAccountRepository.findByUsername("testy")
-      assertTrue(optionalUserAccount.isPresent)
-      assertNotNull(optionalUserAccount.get().activeCaseload)
-      assertTrue { optionalUserAccount.get().activeCaseload?.id == "MDI" }
+      assertFalse(optionalUserAccount.isPresent)
     }
 
     @Test
@@ -268,25 +248,99 @@ class MigrationResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isOk
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
 
-      val optionalUserAccount = userAccountRepository.findByUsername("testy-1")
-      assertTrue(optionalUserAccount.isPresent)
-      assertNotNull(optionalUserAccount.get().activeCaseload)
-      assertTrue { optionalUserAccount.get().activeCaseload?.id == "LEI" }
+      var optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      assertFalse(optionalUserAccount.isPresent)
+
+      optionalUserAccount = userAccountRepository.findByUsername("testy-2")
+      assertFalse(optionalUserAccount.isPresent)
     }
 
     @Test
-    fun activeCaseloadIdSetToNullWhenNoActiveCaseloadIdSetAndNoUserAccessibleCaseloads() {
+    fun activeCaseloadIdOnlyPresentInMigratedUserAccessibleCaseloadRelatingToDifferentUserAccountAndNoUserAccessibleCaseloadsPresentForAccount() {
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
         .body(
           BodyInserters.fromValue(
             UserMigrationRequest(
               user = migratedUser(),
-              accounts = listOf(userAccount(username = "testy-1"), userAccount(username = "testy-2")),
+              accounts = listOf(userAccount(username = "testy-1", activeCaseloadId = "MDI"), userAccount(username = "testy-2", activeCaseloadId = "LEI")),
+              roles = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy-2", caseloadId = "MDI"), accessibleCaseload(username = "testy-2", caseloadId = "LEI")),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
+
+      var optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      assertFalse(optionalUserAccount.isPresent)
+
+      optionalUserAccount = userAccountRepository.findByUsername("testy-2")
+      assertFalse(optionalUserAccount.isPresent)
+    }
+
+    @Test
+    fun activeCaseloadIdSetToNullAndNoUserAccessibleCaseloads() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(),
+              accounts = listOf(userAccount(username = "testy-1", activeCaseloadId = null)),
               roles = null,
               accessibleCaseloads = null,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      assertTrue(optionalUserAccount.isPresent)
+      assertNull(optionalUserAccount.get().activeCaseload)
+    }
+
+    @Test
+    fun activeCaseloadIdSetAndNoUserAccessibleCaseloadsPresent() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(),
+              accounts = listOf(userAccount(username = "testy-1", activeCaseloadId = "LEI")),
+              roles = null,
+              accessibleCaseloads = null,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload LEI not found for user testy-1")
+    }
+
+    @Test
+    fun activeCaseloadIdSetToNullAndUserAccessibleCaseloadsPresent() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(),
+              accounts = listOf(userAccount(username = "testy-1", activeCaseloadId = null)),
+              roles = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy-1", caseloadId = "LEI")),
             ),
           ),
         )
@@ -308,7 +362,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
               user = migratedUser(),
               accounts = listOf(userAccount(username = "testy")),
               roles = listOf(userRole(username = "testy-xxx", roleCode = "ROLE_BANANAS")),
-              accessibleCaseloads = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI")),
             ),
           ),
         )
@@ -329,7 +383,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
               user = migratedUser(),
               accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
               roles = null,
-              accessibleCaseloads = listOf(accessibleCaseload(username = "testy-1", caseloadId = "MDI")),
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI"), accessibleCaseload(username = "testy-1", caseloadId = "MDI")),
             ),
           ),
         )
@@ -348,9 +402,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
           BodyInserters.fromValue(
             UserMigrationRequest(
               user = migratedUser(emails = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test@justice.gov.uk"))),
-              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI"), userAccount(username = "testy-1", activeCaseloadId = "LEI")),
+              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
               roles = null,
-              accessibleCaseloads = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI")),
             ),
           ),
         )
@@ -377,7 +431,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
               user = migratedUser(emails = null),
               accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI"), userAccount(username = "testy-1", activeCaseloadId = "LEI")),
               roles = null,
-              accessibleCaseloads = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI"), accessibleCaseload(username = "testy-1", caseloadId = "LEI")),
             ),
           ),
         )
