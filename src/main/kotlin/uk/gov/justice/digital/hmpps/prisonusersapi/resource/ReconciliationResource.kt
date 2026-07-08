@@ -7,28 +7,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.PrisonUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserReconciliationResponse
 import java.time.LocalDateTime
 import java.util.Collections.emptyList
 import java.util.UUID
 
 @RestController
 @RequestMapping("/reconciliation")
-class ReconciliationResource(
-) {
+class ReconciliationResource {
 
   @PreAuthorize("hasRole('ROLE_PRISON_USERS_API__MIGRATION__RW')")
   @GetMapping("/user/{legacyStaffId}")
@@ -48,26 +41,41 @@ class ReconciliationResource(
       ApiResponse(
         responseCode = "200",
         description = "Returns the prison user data.",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = PrisonUser::class))],
+        content = [
+          Content(
+            mediaType = "application/json",
+            schema = Schema(implementation = PrisonUserReconciliationResponse::class),
+          ),
+        ],
       ),
       ApiResponse(
         responseCode = "400",
         description = "Invalid request",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+        content = [
+          Content(
+            mediaType = "application/json",
+            schema = Schema(implementation = ErrorResponse::class),
+          ),
+        ],
       ),
       ApiResponse(
         responseCode = "401",
         description = "Unauthorized to access this endpoint",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      )
+        content = [
+          Content(
+            mediaType = "application/json",
+            schema = Schema(implementation = ErrorResponse::class),
+          ),
+        ],
+      ),
     ],
   )
   fun getPrisonUser(
     @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
     @PathVariable
     legacyStaffId: Long,
-  ): ResponseEntity<PrisonUser> {
-    return ResponseEntity.ok(PrisonUser(
+  ): ResponseEntity<PrisonUserReconciliationResponse> = ResponseEntity.ok(
+    PrisonUserReconciliationResponse(
       userId = UUID.randomUUID(),
       staffId = 123456,
       firstName = "Test",
@@ -77,6 +85,6 @@ class ReconciliationResource(
       createdBy = "Test User",
       emails = emptyList(),
       accounts = emptyList(),
-    ))
-  }
+    ),
+  )
 }
