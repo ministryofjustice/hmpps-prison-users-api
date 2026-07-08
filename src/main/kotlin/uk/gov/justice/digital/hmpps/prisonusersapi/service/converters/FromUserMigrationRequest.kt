@@ -20,12 +20,10 @@ fun UserMigrationRequest.toUser(): User {
       modifiedBy = modifiedBy,
     )
 
-    var primaryEmail: String? = this.emails?.firstOrNull { it.email?.endsWith("@justice.gov.uk") ?: false }?.email
-    if (primaryEmail == null) {
-      primaryEmail = this.emails?.first()?.email
-    }
+    val emails = this.emails.orEmpty()
+    val primaryEmail: String? = emails.firstOrNull { it.email?.endsWith("@justice.gov.uk") ?: false }?.email ?: emails.firstOrNull()?.email
 
-    this.emails?.forEach {
+    emails.forEach {
       user.addUserEmail(
         UserEmail(
           id = UserEmailId(email = it.email!!),

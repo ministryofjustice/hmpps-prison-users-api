@@ -57,7 +57,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     internal fun deleteUsers(): Unit = dataBuilder.deleteAll()
 
     @Test
-    fun `access forbidden when no authority`() {
+    fun `access unauthorized when no authority`() {
       webTestClient.post().uri("/migrate/user")
         .body(
           BodyInserters.fromValue(
@@ -182,6 +182,46 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectBody()
         .jsonPath("userMessage")
         .isEqualTo("User already exists: User with legacy staff id ${userMigrationRequest.user!!.staffId} already exists")
+    }
+
+    @Test
+    fun duplicateUserAccountUsername() {
+      val userMigrationRequest = UserMigrationRequest(
+        user = migratedUser(),
+        accounts = listOf(userAccount(username = "testy")),
+        roles = null,
+        accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
+      )
+
+      val userMigrationRequestWithDuplicateAccountUsername = UserMigrationRequest(
+        user = migratedUser(staffId = 1, firstName = "DuplicateAccount", lastName = "Test", emails = listOf(migratedUserEmail("duplicate-test@email.com"), migratedUserEmail("duplicate-test2@email.com"))),
+        accounts = listOf(userAccount(username = "testy")),
+        roles = null,
+        accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
+      )
+
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            userMigrationRequest,
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            userMigrationRequestWithDuplicateAccountUsername,
+          ),
+        )
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.SC_CONFLICT)
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("User account already exists: User account with username testy already exists")
     }
 
     @Test
@@ -694,11 +734,16 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       createdBy = "TEST_USER",
     )
 
-    private fun migratedUser(emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com"))) = MigratedUser(
-      staffId = Long.MAX_VALUE,
+    private fun migratedUser(
+      emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com")),
+      staffId: Long? = Long.MAX_VALUE,
+      firstName: String = "Test",
+      lastName: String = "User",
+    ) = MigratedUser(
+      staffId = staffId,
       emails = emails,
-      firstName = "Test",
-      lastName = "User",
+      firstName = firstName,
+      lastName = lastName,
       status = UserStatus.ACTIVE,
       createdTimestamp = LocalDateTime.now(),
       createdBy = "TEST_USER",

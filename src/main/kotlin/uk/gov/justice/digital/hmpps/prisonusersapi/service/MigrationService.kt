@@ -62,12 +62,16 @@ class MigrationService(
       }
 
     userMigrationRequest.accounts?.let {
-      val userAccounts = userAccountRepository.saveAllAndFlush<UserAccount>(
-        userMigrationRequest.toUserAccounts(
-          user,
-          toActiveCaseloadMapper,
-        )!!,
-      )
+      var userAccounts = userMigrationRequest.toUserAccounts(
+        user,
+        toActiveCaseloadMapper,
+      )!!
+
+      userAccounts.forEach { userAccount ->
+        if (userAccountRepository.existsByUsername(userAccount.username)) throw UserAccountAlreadyExistsException("User account with username ${userAccount.username} already exists")
+      }
+
+      userAccounts = userAccountRepository.saveAllAndFlush<UserAccount>(userAccounts)
 
       userMigrationRequest.roles?.let {
         val userRoles = mutableListOf<UserRole>()
@@ -153,5 +157,7 @@ class ActiveCaseloadNotInUserAccessibleCaseloadsException(message: String?) : Ru
 class CaseloadNotFoundException(message: String?) : RuntimeException(message)
 
 class UserAccessibleCaseloadsWithoutUserAccountException(message: String?) : RuntimeException(message)
+
+class UserAccountAlreadyExistsException(message: String?) : RuntimeException(message)
 
 class UserAlreadyExistsException(message: String?) : RuntimeException(message)

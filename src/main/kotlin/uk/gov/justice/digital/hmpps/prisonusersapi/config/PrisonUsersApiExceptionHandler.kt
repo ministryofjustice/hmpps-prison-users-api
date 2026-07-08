@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.config
 
 import jakarta.validation.ValidationException
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CONFLICT
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.ActiveCaseloadNotInUserAccessibleCaseloadsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.CaseloadNotFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloadsWithoutUserAccountException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccountAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserRoleWithoutUserAccountException
@@ -129,6 +131,34 @@ class PrisonUsersApiExceptionHandler {
         ErrorResponse(
           status = CONFLICT,
           userMessage = "User already exists: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(UserAccountAlreadyExistsException::class)
+  fun handleUserAccountAlreadyExistsException(e: UserAccountAlreadyExistsException): ResponseEntity<ErrorResponse> {
+    log.debug("User account already exists exception caught: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "User account already exists: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException::class)
+  fun handleDataIntegrityViolationException(e: DataIntegrityViolationException): ResponseEntity<ErrorResponse> {
+    log.debug("Data integrity violation exception caught: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "Conflict: Data integrity violation",
           developerMessage = e.message,
         ),
       )
