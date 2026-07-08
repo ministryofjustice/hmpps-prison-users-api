@@ -49,6 +49,8 @@ data class PrisonUserReconciliationResponse(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "User email details", type = "object")
 data class PrisonUserEmail(
+  @Schema(description = "The id of the email record", example = "123456")
+  var emailId: Long,
 
   @Schema(description = "The email address for the user", type = "string", example = "test@email.com")
   var email: String,
