@@ -70,7 +70,7 @@ class ReconciliationResource {
       ),
     ],
   )
-  fun getPrisonUser(
+  fun getPrisonUserForReconciliation(
     @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
     @PathVariable
     legacyStaffId: Long,

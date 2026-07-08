@@ -48,7 +48,7 @@ class SyncResource {
       ),
     ],
   )
-  fun getPrisonUser(
+  fun putPrisonUserForSync(
     @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
     @PathVariable
     legacyStaffId: Long,
