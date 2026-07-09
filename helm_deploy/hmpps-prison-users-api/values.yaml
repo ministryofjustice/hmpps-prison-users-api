@@ -38,6 +38,12 @@ generic-service:
     hmpps-prison-users-api-application-insights:
       APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
 
+    dps-rds-instance-output:
+      SPRING_DATASOURCE_NAME: "database_name"
+      SPRING_DATASOURCE_ENDPOINT: "rds_instance_endpoint"
+      SPRING_DATASOURCE_USERNAME: "database_username"
+      SPRING_DATASOURCE_PASSWORD: "database_password"
+
   allowlist:
     groups:
       - internal
