@@ -14,4 +14,6 @@ interface UserAccountRepository : JpaRepository<UserAccount, String> {
 
   @EntityGraph(value = "UserAccount.withUserAndActiveCaseload", type = EntityGraph.EntityGraphType.LOAD)
   fun findByUsername(username: String): Optional<UserAccount>
+
+  fun existsByUsername(username: String): Boolean
 }

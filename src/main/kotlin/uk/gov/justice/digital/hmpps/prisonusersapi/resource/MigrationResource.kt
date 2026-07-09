@@ -5,15 +5,12 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
-import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
@@ -21,15 +18,13 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
 
 @RestController
-@Validated
 @RequestMapping("/migrate")
 class MigrationResource(
   private val migrationService: MigrationService,
 ) {
 
-  @PreAuthorize("hasAnyRole('ROLE_PRISON_USERS_API__MIGRATION__RW')")
+  @PreAuthorize("hasRole('ROLE_PRISON_USERS_API__MIGRATION__RW')")
   @PostMapping("/user")
-  @ResponseStatus(HttpStatus.OK, reason = "User created with associated accounts, role and caseload links from NOMIS")
   @Operation(
     summary = "Migrate a single user from NOMIS into Prison Users API, including associated accounts, role and caseload link data",
     description = "Creates a user. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
@@ -70,10 +65,10 @@ class MigrationResource(
     ],
   )
   fun migrateUser(
-    @RequestBody @Valid
+    @Validated @RequestBody
     userMigrationRequest: UserMigrationRequest,
   ): ResponseEntity<UserMigrationResponse> {
-    migrationService.migrateUser(userMigrationRequest)
-    return ResponseEntity.status(HttpStatus.CREATED).build()
+    val response = migrationService.migrateUser(userMigrationRequest)
+    return ResponseEntity.ok(response)
   }
 }

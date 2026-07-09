@@ -2,21 +2,32 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.config
 
 import jakarta.validation.ValidationException
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
+import org.springframework.validation.FieldError
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.ActiveCaseloadNotInUserAccessibleCaseloadsException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.CaseloadNotFoundException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloadsWithoutUserAccountException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccountAlreadyExistsException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
-import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserRoleWithoutUserAccountException
 
 @RestControllerAdvice
 class PrisonUsersApiExceptionHandler {
+
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(BAD_REQUEST)
@@ -26,7 +37,40 @@ class PrisonUsersApiExceptionHandler {
         userMessage = "Validation failure: ${e.message}",
         developerMessage = e.message,
       ),
-    ).also { log.info("Validation exception: {}", e.message) }
+    ).also { logValidationFailureFor(e) }
+
+  @ExceptionHandler(UserAccessibleCaseloadsWithoutUserAccountException::class)
+  fun handleUserAccessibleCaseloadsWithoutUserAccountException(e: UserAccessibleCaseloadsWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
+
+  @ExceptionHandler(UserRoleWithoutUserAccountException::class)
+  fun handleUserRoleWithoutUserAccountException(e: UserRoleWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
+
+  @ExceptionHandler(ActiveCaseloadNotInUserAccessibleCaseloadsException::class)
+  fun handleActiveCaseloadNotInUserAccessibleCaseloadException(e: ActiveCaseloadNotInUserAccessibleCaseloadsException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
 
   @ExceptionHandler(NoResourceFoundException::class)
   fun handleNoResourceFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> = ResponseEntity
@@ -64,6 +108,62 @@ class PrisonUsersApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CaseloadNotFoundException::class)
+  fun caseloadNotFoundException(e: CaseloadNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Caseload not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = NOT_FOUND,
+          userMessage = "Caseload not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(UserAlreadyExistsException::class)
+  fun handleUserAlreadyExistsException(e: UserAlreadyExistsException): ResponseEntity<ErrorResponse> {
+    log.debug("User already exists exception caught: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "User already exists: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(UserAccountAlreadyExistsException::class)
+  fun handleUserAccountAlreadyExistsException(e: UserAccountAlreadyExistsException): ResponseEntity<ErrorResponse> {
+    log.debug("User account already exists exception caught: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "User account already exists: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException::class)
+  fun handleDataIntegrityViolationException(e: DataIntegrityViolationException): ResponseEntity<ErrorResponse> {
+    log.debug("Data integrity violation exception caught: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "Conflict: Data integrity violation",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(Exception::class)
   fun handleException(e: Exception): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(INTERNAL_SERVER_ERROR)
@@ -74,6 +174,29 @@ class PrisonUsersApiExceptionHandler {
         developerMessage = e.message,
       ),
     ).also { log.error("Unexpected exception", e) }
+
+  @ExceptionHandler(MethodArgumentNotValidException::class)
+  fun handleMethodArgumentNotValidException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+    log.info("Validation exception: {}", e.message)
+    val errors = e.allErrors.mapNotNull {
+      when (it) {
+        is FieldError -> "${it.field} ${it.defaultMessage}"
+        else -> it.defaultMessage
+      }
+    }.sortedBy { it }
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .contentType(APPLICATION_JSON)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          userMessage = "Validation failure: ${errors.joinToString(", ")}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  private fun logValidationFailureFor(e: Exception) = log.info("Validation failure: ${e.message}")
 
   private companion object {
     private val log = LoggerFactory.getLogger(this::class.java)

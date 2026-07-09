@@ -28,6 +28,7 @@ spring:
       include-message: always
 
   datasource:
+    url: jdbc:postgresql://${SPRING_DATASOURCE_ENDPOINT}/${SPRING_DATASOURCE_NAME}?sslmode=verify-full
     hikari:
       pool-name: prison-users-api-CP
       maximum-pool-size: 20
@@ -36,6 +37,11 @@ spring:
 
   flyway:
     locations: classpath:db/prison-users
+
+  profiles:
+    group:
+      test:
+        - "dev"
 
 server:
   port: 8080
