@@ -38,6 +38,11 @@ spring:
   flyway:
     locations: classpath:db/prison-users
 
+  profiles:
+    group:
+      test:
+        - "dev"
+
 server:
   port: 8080
   servlet:
