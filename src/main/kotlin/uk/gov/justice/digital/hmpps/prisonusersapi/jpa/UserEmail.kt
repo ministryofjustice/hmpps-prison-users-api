@@ -33,4 +33,3 @@ data class UserEmail(
   @JoinColumn(name = "user_id")
   val user: User,
 )
-
