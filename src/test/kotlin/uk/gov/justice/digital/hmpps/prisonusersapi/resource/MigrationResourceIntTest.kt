@@ -454,11 +454,34 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("$.userId").isNotEmpty
         .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
-      val emailsByUserId = userEmailsRepository.findAll().groupBy { it.id.userId }
-      val firstEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@email.com" }
-      val secondEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@justice.gov.uk" }
+      val emailsByUserId = userEmailsRepository.findAll().groupBy { it.user.userId }
+      val firstEmail = emailsByUserId.entries.first().value.find { it.email == "test@email.com" }
+      val secondEmail = emailsByUserId.entries.first().value.find { it.email == "test@justice.gov.uk" }
       assertTrue { secondEmail?.isPrimary!! }
       assertFalse { firstEmail?.isPrimary!! }
+    }
+
+    @Test
+    fun duplicateEmailsForSameUser() {
+      webTestClient.post().uri("/migrate/user")
+        .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
+        .body(
+          BodyInserters.fromValue(
+            UserMigrationRequest(
+              user = migratedUser(emails = listOf(migratedUserEmail("duplicate@email.com"), migratedUserEmail("duplicate@email.com"))),
+              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
+              roles = null,
+              accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI")),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.SC_CONFLICT)
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Conflict: Data integrity violation")
+
+      assertTrue { userRepository.findAll().isEmpty() }
     }
 
     @Test
@@ -537,12 +560,12 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       val allUsers = userRepository.findAll()
       assertTrue { allUsers.size == 1 }
 
-      val emailsByUserId = userEmailsRepository.findAll().groupBy { it.id.userId }
+      val emailsByUserId = userEmailsRepository.findAll().groupBy { it.user.userId }
       assertTrue { emailsByUserId.size == 1 }
-      assertTrue { emailsByUserId.entries.flatMap { it.value }.map { it.id.email }.containsAll<Any>(listOf("test@email.com", "test-2@email.com")) }
+      assertTrue { emailsByUserId.entries.flatMap { it.value }.map { it.email }.containsAll(listOf("test@email.com", "test-2@email.com")) }
 
-      val firstEmail = emailsByUserId.entries.first().value.find { it.id.email == "test@email.com" }
-      val secondEmail = emailsByUserId.entries.first().value.find { it.id.email == "test-2@email.com" }
+      val firstEmail = emailsByUserId.entries.first().value.find { it.email == "test@email.com" }
+      val secondEmail = emailsByUserId.entries.first().value.find { it.email == "test-2@email.com" }
       assertTrue { firstEmail?.isPrimary!! }
       assertFalse { secondEmail?.isPrimary!! }
     }

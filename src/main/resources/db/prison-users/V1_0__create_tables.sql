@@ -16,8 +16,11 @@ CREATE TABLE users
 
 CREATE UNIQUE INDEX ux_user_entra_uuid ON users(entra_uuid);
 
+CREATE SEQUENCE user_emails_id_seq START WITH 1 INCREMENT BY 1;
+
 CREATE TABLE user_emails
 (
+    id BIGINT NOT NULL DEFAULT nextval('user_emails_id_seq'),
     user_id UUID NOT NULL,
     email TEXT NOT NULL,
     is_primary BOOLEAN NOT NULL DEFAULT FALSE,
@@ -26,7 +29,7 @@ CREATE TABLE user_emails
     modified_timestamp TIMESTAMP,
     modified_by TEXT,
 
-    CONSTRAINT pk_user_emails PRIMARY KEY (user_id, email),
+    CONSTRAINT pk_user_emails PRIMARY KEY (id),
 
     CONSTRAINT fk_user
         FOREIGN KEY (user_id)
@@ -36,7 +39,7 @@ CREATE TABLE user_emails
 
 -- Index on user id and email
 CREATE INDEX ux_user_emails_user_id ON user_emails(user_id);
-CREATE UNIQUE INDEX ux_user_emails_email ON user_emails(email);
+CREATE UNIQUE INDEX ux_user_emails_user_id_email ON user_emails (user_id, email);
 
 CREATE TABLE user_account (
     user_id UUID NOT NULL,
