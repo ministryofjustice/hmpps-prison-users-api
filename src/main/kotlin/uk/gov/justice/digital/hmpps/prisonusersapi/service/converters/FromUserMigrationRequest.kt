@@ -5,7 +5,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmailId
 
 fun UserMigrationRequest.toUser(): User {
   with(this.user!!) {
@@ -26,7 +25,7 @@ fun UserMigrationRequest.toUser(): User {
     emails.forEach {
       user.addUserEmail(
         UserEmail(
-          id = UserEmailId(email = it.email!!),
+          email = it.email!!,
           isPrimary = it.email == primaryEmail,
           createdBy = it.createdBy!!,
           createdTimestamp = it.createdTimestamp!!,

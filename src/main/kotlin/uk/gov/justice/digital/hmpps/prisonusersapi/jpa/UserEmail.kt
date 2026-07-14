@@ -1,23 +1,27 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.jpa
 
 import jakarta.persistence.Column
-import jakarta.persistence.Embeddable
-import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.MapsId
+import jakarta.persistence.SequenceGenerator
 import jakarta.persistence.Table
-import java.io.Serializable
 import java.time.LocalDateTime
-import java.util.UUID
 
 @Entity
 @Table(name = "user_emails")
 data class UserEmail(
-  @EmbeddedId
-  val id: UserEmailId,
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_email_id_seq")
+  @SequenceGenerator(name = "user_email_id_seq", sequenceName = "user_emails_id_seq", allocationSize = 1)
+  val id: Long? = null,
+
+  @Column(name = "email")
+  val email: String,
 
   val isPrimary: Boolean,
   val createdBy: String,
@@ -25,17 +29,7 @@ data class UserEmail(
   val modifiedBy: String? = null,
   val modifiedTimestamp: LocalDateTime? = null,
 
-  @MapsId("userId")
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   val user: User,
 )
-
-@Embeddable
-data class UserEmailId(
-  @Column(name = "user_id")
-  var userId: UUID? = null,
-
-  @Column(name = "email")
-  val email: String,
-) : Serializable
