@@ -13,6 +13,13 @@ generic-service:
     SPRINGDOC_API-DOCS_ENABLED: "true"
     SPRINGDOC_SWAGGER-UI_ENABLED: "true"
 
+  namespace_secrets:
+    rds-instance-output:
+      SPRING_DATASOURCE_NAME: "database_name"
+      SPRING_DATASOURCE_ENDPOINT: "rds_instance_endpoint"
+      SPRING_DATASOURCE_USERNAME: "database_username"
+      SPRING_DATASOURCE_PASSWORD: "database_password"
+
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
