@@ -30,8 +30,8 @@ class MigrationService(
 
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
-    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user?.staffId!!)) {
-      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user!!.staffId} already exists")
+    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user.staffId)) {
+      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.staffId} already exists")
     }
 
     val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
@@ -83,12 +83,12 @@ class MigrationService(
           }
 
           migratedRolesForUser.value.forEach { migratedUserRole ->
-            UserRoleId(userAccount.username, migratedUserRole.roleCode!!).let {
+            UserRoleId(userAccount.username, migratedUserRole.roleCode).let {
               userRoles.add(
                 UserRole(
                   it,
-                  migratedUserRole.createdBy!!,
-                  migratedUserRole.createdTimestamp!!,
+                  migratedUserRole.createdBy,
+                  migratedUserRole.createdTimestamp,
                 ),
               )
             }
@@ -117,8 +117,8 @@ class MigrationService(
                   it,
                   caseload = caseload,
                   userAccount = userAccount,
-                  createdBy = migratedUserAccessibleCaseload.createdBy!!,
-                  createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp!!,
+                  createdBy = migratedUserAccessibleCaseload.createdBy,
+                  createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp,
                 ),
               )
             }
@@ -132,7 +132,7 @@ class MigrationService(
 
   private fun loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest: UserMigrationRequest): Map<String, Caseload>? {
     var userAccessibleCaseloadsByIdMap: Map<String, Caseload>? = null
-    val allCaseloadIds = userMigrationRequest.accessibleCaseloads?.map { it.caseloadId!! }?.toSet()
+    val allCaseloadIds = userMigrationRequest.accessibleCaseloads?.map { it.caseloadId }?.toSet()
     allCaseloadIds?.let {
       val caseloadsById = caseloadRepository.findAllById(allCaseloadIds)
       if (caseloadsById.size != allCaseloadIds.size) {

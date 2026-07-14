@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -63,6 +64,17 @@ class PrisonUsersApiExceptionHandler {
 
   @ExceptionHandler(ActiveCaseloadNotInUserAccessibleCaseloadsException::class)
   fun handleActiveCaseloadNotInUserAccessibleCaseloadException(e: ActiveCaseloadNotInUserAccessibleCaseloadsException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { logValidationFailureFor(e) }
+
+  @ExceptionHandler(HttpMessageNotReadableException::class)
+  fun handleHttpMessageNotReadableException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(BAD_REQUEST)
     .body(
       ErrorResponse(

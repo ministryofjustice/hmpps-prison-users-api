@@ -3,16 +3,14 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.data
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
-import jakarta.validation.constraints.NotNull
 import java.time.LocalDateTime
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Single NOMIS user migration request", type = "object")
 data class UserMigrationRequest(
   @Schema(required = true, description = "The NOMIS user to migrate")
-  @field:NotNull(message = "Expected one 'user'")
   @field:Valid
-  var user: MigratedUser? = null,
+  var user: MigratedUser,
 
   @Schema(description = "The NOMIS user accounts to migrate")
   @field:Valid
@@ -31,32 +29,26 @@ data class UserMigrationRequest(
 @Schema(description = "Single NOMIS user details", type = "object")
 data class MigratedUser(
   @Schema(required = true, description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
-  @field:NotNull(message = "Expected staff id")
-  var staffId: Long? = null,
+  var staffId: Long,
 
   @Schema(required = false, description = "The email addresses for the user")
   @field:Valid
   val emails: List<MigratedUserEmail>?,
 
   @Schema(required = true, description = "First name of the user", type = "string", example = "John")
-  @field:NotNull(message = "Expected first name")
-  var firstName: String? = null,
+  var firstName: String,
 
   @Schema(required = true, description = "The last name of the user", type = "string", example = "Smith")
-  @field:NotNull(message = "Expected last name")
-  var lastName: String? = null,
+  var lastName: String,
 
   @Schema(required = true, description = "The status of the user e.g. ACTIVE/INACTIVE", type = "string", allowableValues = ["ACTIVE", "INACTIVE"])
-  @field:NotNull(message = "Expected user status")
-  var status: UserStatus? = null,
+  var status: UserStatus,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  @field:NotNull(message = "Expected created timestamp")
-  var createdTimestamp: LocalDateTime? = null,
+  var createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected created by")
-  var createdBy: String? = null,
+  var createdBy: String,
 
   @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val modifiedTimestamp: LocalDateTime? = null,
@@ -70,16 +62,13 @@ data class MigratedUser(
 data class MigratedUserEmail(
 
   @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
-  @field:NotNull(message = "Expected email address")
-  var email: String? = null,
+  var email: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  @field:NotNull(message = "Expected created timestamp")
-  var createdTimestamp: LocalDateTime? = null,
+  var createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected created by")
-  var createdBy: String? = null,
+  var createdBy: String,
 
   @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val modifiedTimestamp: LocalDateTime? = null,
@@ -92,12 +81,10 @@ data class MigratedUserEmail(
 @Schema(description = "NOMIS User account details", type = "object")
 data class MigratedUserAccount(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected username")
-  var username: String? = null,
+  var username: String,
 
   @Schema(required = true, description = "The user account type e.g. ADMIN/GENERAL", type = "string", allowableValues = ["ADMIN", "GENERAL"])
-  @field:NotNull(message = "Expected account type")
-  var accountType: UsageType? = null,
+  var accountType: UsageType,
 
   @Schema(
     required = true,
@@ -105,16 +92,13 @@ data class MigratedUserAccount(
     type = "string",
     allowableValues = ["OPEN", "EXPIRED", "EXPIRED_GRACE", "LOCKED_TIMED", "LOCKED", "EXPIRED_LOCKED_TIMED", "EXPIRED_GRACE_LOCKED_TIMED", "EXPIRED_LOCKED", "EXPIRED_GRACE_LOCKED"],
   )
-  @field:NotNull(message = "Expected account status")
-  var accountStatus: AccountStatus? = null,
+  var accountStatus: AccountStatus,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  @field:NotNull(message = "Expected created timestamp")
-  var createdTimestamp: LocalDateTime? = null,
+  var createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected created by")
-  var createdBy: String? = null,
+  var createdBy: String,
 
   @Schema(description = "The timestamp of the last login for the account", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val lastLoggedIn: LocalDateTime? = null,
@@ -133,38 +117,30 @@ data class MigratedUserAccount(
 @Schema(description = "NOMIS user account to caseload link", type = "object")
 data class MigratedUserAccessibleCaseload(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected username")
-  var username: String? = null,
+  var username: String,
 
   @Schema(required = true, description = "Identifier for the caseload the user account can access", type = "string", example = "MRI")
-  @field:NotNull(message = "Expected caseload id")
-  var caseloadId: String? = null,
+  var caseloadId: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  @field:NotNull(message = "Expected created timestamp")
-  var createdTimestamp: LocalDateTime? = null,
+  var createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected created by")
-  var createdBy: String? = null,
+  var createdBy: String,
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "NOMIS user account to role link", type = "object")
 data class MigratedUserRole(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected username")
-  var username: String? = null,
+  var username: String,
 
   @Schema(required = true, description = "The role code the user account will be assigned", type = "string", example = "TEST_ROLE")
-  @field:NotNull(message = "Expected role code")
-  var roleCode: String? = null,
+  var roleCode: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  @field:NotNull(message = "Expected created timestamp")
-  var createdTimestamp: LocalDateTime? = null,
+  var createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  @field:NotNull(message = "Expected created by")
-  var createdBy: String? = null,
+  var createdBy: String,
 )
