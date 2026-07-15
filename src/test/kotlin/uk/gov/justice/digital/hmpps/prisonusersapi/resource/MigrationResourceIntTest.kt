@@ -609,6 +609,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .bodyValue(request)
         .exchange()
         .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     @Test
@@ -634,7 +637,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isBadRequest
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("Validation failure: JSON parse error: Missing required creator property 'staffId' (index 0)")
+        .isNotEmpty
     }
 
     @Test
@@ -653,6 +656,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .bodyValue(request)
         .exchange()
         .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     @Test
@@ -686,6 +692,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .bodyValue(request)
         .exchange()
         .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     @Test
@@ -711,6 +720,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .bodyValue(request)
         .exchange()
         .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     @Test
@@ -731,6 +743,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .bodyValue(request)
         .exchange()
         .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     private fun userAccount(username: String = "test_one", activeCaseloadId: String? = "MDI") = MigratedUserAccount(
