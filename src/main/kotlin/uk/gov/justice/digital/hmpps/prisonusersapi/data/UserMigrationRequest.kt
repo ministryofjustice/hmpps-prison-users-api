@@ -29,26 +29,26 @@ data class UserMigrationRequest(
 @Schema(description = "Single NOMIS user details", type = "object")
 data class MigratedUser(
   @Schema(required = true, description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
-  var staffId: Long,
+  val staffId: Long,
 
   @Schema(required = false, description = "The email addresses for the user")
   @field:Valid
   val emails: List<MigratedUserEmail>?,
 
   @Schema(required = true, description = "First name of the user", type = "string", example = "John")
-  var firstName: String,
+  val firstName: String,
 
   @Schema(required = true, description = "The last name of the user", type = "string", example = "Smith")
-  var lastName: String,
+  val lastName: String,
 
   @Schema(required = true, description = "The status of the user e.g. ACTIVE/INACTIVE", type = "string", allowableValues = ["ACTIVE", "INACTIVE"])
-  var status: UserStatus,
+  val status: UserStatus,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  var createdTimestamp: LocalDateTime,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  var createdBy: String,
+  val createdBy: String,
 
   @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val modifiedTimestamp: LocalDateTime? = null,
@@ -62,13 +62,13 @@ data class MigratedUser(
 data class MigratedUserEmail(
 
   @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
-  var email: String,
+  val email: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  var createdTimestamp: LocalDateTime,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  var createdBy: String,
+  val createdBy: String,
 
   @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val modifiedTimestamp: LocalDateTime? = null,
@@ -81,10 +81,10 @@ data class MigratedUserEmail(
 @Schema(description = "NOMIS User account details", type = "object")
 data class MigratedUserAccount(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  var username: String,
+  val username: String,
 
   @Schema(required = true, description = "The user account type e.g. ADMIN/GENERAL", type = "string", allowableValues = ["ADMIN", "GENERAL"])
-  var accountType: UsageType,
+  val accountType: UsageType,
 
   @Schema(
     required = true,
@@ -92,13 +92,13 @@ data class MigratedUserAccount(
     type = "string",
     allowableValues = ["OPEN", "EXPIRED", "EXPIRED_GRACE", "LOCKED_TIMED", "LOCKED", "EXPIRED_LOCKED_TIMED", "EXPIRED_GRACE_LOCKED_TIMED", "EXPIRED_LOCKED", "EXPIRED_GRACE_LOCKED"],
   )
-  var accountStatus: AccountStatus,
+  val accountStatus: AccountStatus,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  var createdTimestamp: LocalDateTime,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  var createdBy: String,
+  val createdBy: String,
 
   @Schema(description = "The timestamp of the last login for the account", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val lastLoggedIn: LocalDateTime? = null,
@@ -117,30 +117,30 @@ data class MigratedUserAccount(
 @Schema(description = "NOMIS user account to caseload link", type = "object")
 data class MigratedUserAccessibleCaseload(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  var username: String,
+  val username: String,
 
   @Schema(required = true, description = "Identifier for the caseload the user account can access", type = "string", example = "MRI")
-  var caseloadId: String,
+  val caseloadId: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  var createdTimestamp: LocalDateTime,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  var createdBy: String,
+  val createdBy: String,
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "NOMIS user account to role link", type = "object")
 data class MigratedUserRole(
   @Schema(required = true, description = "Username for the user account", type = "string", example = "TEST_USER")
-  var username: String,
+  val username: String,
 
   @Schema(required = true, description = "The role code the user account will be assigned", type = "string", example = "TEST_ROLE")
-  var roleCode: String,
+  val roleCode: String,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
-  var createdTimestamp: LocalDateTime,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
-  var createdBy: String,
+  val createdBy: String,
 )
