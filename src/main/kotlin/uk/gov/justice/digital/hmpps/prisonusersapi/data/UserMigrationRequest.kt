@@ -28,7 +28,7 @@ data class UserMigrationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Single NOMIS user details", type = "object")
 data class MigratedUser(
-  @Schema(required = true, description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
+  @Schema(required = true, description = "The NOMIS staff id", example = "123456")
   val staffId: Long,
 
   @Schema(required = false, description = "The email addresses for the user")
