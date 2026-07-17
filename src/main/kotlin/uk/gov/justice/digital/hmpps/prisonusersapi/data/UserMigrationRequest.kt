@@ -64,6 +64,9 @@ data class MigratedUserEmail(
   @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
   val email: String,
 
+  @Schema(required = true, description = "The legacy NOMIS internet address ID for the email", example = "123456")
+  val legacyEmailId: Long,
+
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val createdTimestamp: LocalDateTime,
 
