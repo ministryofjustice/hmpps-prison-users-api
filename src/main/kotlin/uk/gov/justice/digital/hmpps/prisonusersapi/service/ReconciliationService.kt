@@ -26,4 +26,3 @@ class ReconciliationService(
     return user.toPrisonUserReconciliationResponse(userAccounts, userRolesByUsername)
   }
 }
-

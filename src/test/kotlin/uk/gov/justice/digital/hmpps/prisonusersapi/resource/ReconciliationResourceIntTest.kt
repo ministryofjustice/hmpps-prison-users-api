@@ -161,5 +161,3 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     createdBy = "MIGRATION_TEST",
   )
 }
-
-
