@@ -10,6 +10,6 @@ data class UserMigrationResponse(
   @Schema(required = true, description = "The unique identifier for the migrated user", type = "string", format = "uuid", example = "f59dad25-3f11-4a74-9e03-64d2ee53f498")
   val userId: String,
 
-  @Schema(required = true, description = "The NOMIS staff id for the migrated user", type = "integer", format = "int64", example = "123456")
+  @Schema(required = true, description = "The NOMIS staff id for the migrated user", example = "123456")
   val staffId: Long,
 )
