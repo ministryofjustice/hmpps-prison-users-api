@@ -40,8 +40,8 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
           user = MigratedUser(
             staffId = legacyStaffId,
             emails = listOf(
-              migratedUserEmail("person@example.org"),
-              migratedUserEmail("person@justice.gov.uk"),
+              migratedUserEmail("person@example.org", 1),
+              migratedUserEmail("person@justice.gov.uk", 2),
             ),
             firstName = "Recon",
             lastName = "User",
@@ -141,8 +141,9 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     createdBy = "MIGRATION_TEST",
   )
 
-  private fun migratedUserEmail(email: String) = MigratedUserEmail(
+  private fun migratedUserEmail(email: String, legacyEmailId: Long) = MigratedUserEmail(
     email = email,
+    legacyEmailId = legacyEmailId,
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
   )
