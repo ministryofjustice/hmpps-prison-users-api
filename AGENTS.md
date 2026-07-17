@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## What this service is
-- Kotlin/Spring Boot API for prison user data: users, NOMIS-style user accounts, accessible caseloads, and a migration endpoint for loading user/account/role/caseload links.
+- Kotlin/Spring Boot API for prison user data: users, NOMIS-style user accounts, accessible caseloads, and migration/sync/reconciliation endpoints for NOMIS data load and verification.
 - Main flow is `resource/` → `service/` → `jpa/repository/` → PostgreSQL/Flyway. Start with `src/main/kotlin/uk/gov/justice/digital/hmpps/prisonusersapi/resource/` and `service/`.
 - Core packages: `resource/` (REST + auth), `service/` (transactions/business rules), `service/converters/` (entity↔DTO mapping), `jpa/` + `jpa/repository/` (entities/repos), `data/` (API DTOs), `config/` (OpenAPI + exception mapping).
 
@@ -10,7 +10,9 @@
 - Read endpoints currently expose:
   - `GET /users/basic/{username}` in `resource/UserResource.kt`
   - `GET /users/{username}/caseloads` in `resource/UserCaseloadManagementResource.kt`
+  - `GET /reconciliation/user/{legacyStaffId}` in `resource/ReconciliationResource.kt`
 - Migration writes are handled in one transaction in `service/MigrationService.kt`: create `User`, validate caseloads, save `UserAccount`s, then save roles and accessible caseload join rows.
+- `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` and `GET /reconciliation/user/{legacyStaffId}` in `resource/ReconciliationResource.kt` are currently controller-level stubs (no service/repository wiring yet).
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/`; `V1_0__create_tables.sql` is the quickest way to understand table ownership/cascade rules.
 
 ## Local run / build / test
@@ -35,4 +37,3 @@
 - `dev` uses in-memory H2 with Flyway (`application-dev.yml`); deployed environments use PostgreSQL with datasource values injected from Kubernetes secrets (`helm_deploy/hmpps-prison-users-api/values.yaml`).
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
 - If you add endpoints, remember there are tests asserting security coverage and OpenAPI availability/validity (`integration/ResourceSecurityTest.kt`, `integration/OpenApiDocsTest.kt`).
-

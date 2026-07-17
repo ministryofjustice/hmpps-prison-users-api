@@ -12,31 +12,21 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserReconciliationResponse
-import java.time.LocalDateTime
-import java.util.Collections.emptyList
-import java.util.UUID
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.ReconciliationService
 
 @RestController
 @RequestMapping("/reconciliation")
-class ReconciliationResource {
+class ReconciliationResource(
+  private val reconciliationService: ReconciliationService,
+) {
 
   @PreAuthorize("hasRole('ROLE_PRISON_USERS_API__MIGRATION__RW')")
   @GetMapping("/user/{legacyStaffId}")
   @Operation(
     summary = "Get the details of a migrated user by the legacy staff Id",
-    description = "Get the full view of a migrated user.. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
+    description = "Get the full view of a migrated user. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
     security = [SecurityRequirement(name = "PRISON_USERS_API__MIGRATION__RW")],
-    requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
-      content = [
-        Content(
-          mediaType = "application/json",
-          schema = Schema(implementation = UserMigrationRequest::class),
-        ),
-      ],
-    ),
     responses = [
       ApiResponse(
         responseCode = "200",
@@ -51,6 +41,16 @@ class ReconciliationResource {
       ApiResponse(
         responseCode = "400",
         description = "Invalid request",
+        content = [
+          Content(
+            mediaType = "application/json",
+            schema = Schema(implementation = ErrorResponse::class),
+          ),
+        ],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "User not found",
         content = [
           Content(
             mediaType = "application/json",
@@ -74,17 +74,5 @@ class ReconciliationResource {
     @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
     @PathVariable
     legacyStaffId: Long,
-  ): ResponseEntity<PrisonUserReconciliationResponse> = ResponseEntity.ok(
-    PrisonUserReconciliationResponse(
-      userId = UUID.randomUUID(),
-      staffId = 123456,
-      firstName = "Test",
-      lastName = "User",
-      status = UserStatus.ACTIVE,
-      createdTimestamp = LocalDateTime.now(),
-      createdBy = "Test User",
-      emails = emptyList(),
-      accounts = emptyList(),
-    ),
-  )
+  ): ResponseEntity<PrisonUserReconciliationResponse> = ResponseEntity.ok(reconciliationService.getPrisonUserForReconciliation(legacyStaffId))
 }
