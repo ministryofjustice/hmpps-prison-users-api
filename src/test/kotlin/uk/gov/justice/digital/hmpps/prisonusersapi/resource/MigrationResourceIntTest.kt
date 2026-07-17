@@ -194,7 +194,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       )
 
       val userMigrationRequestWithDuplicateAccountUsername = UserMigrationRequest(
-        user = migratedUser(staffId = 1, firstName = "DuplicateAccount", lastName = "Test", emails = listOf(migratedUserEmail("duplicate-test@email.com"), migratedUserEmail("duplicate-test2@email.com"))),
+        user = migratedUser(staffId = 1, firstName = "DuplicateAccount", lastName = "Test", emails = listOf(migratedUserEmail("duplicate-test@email.com", 1), migratedUserEmail("duplicate-test2@email.com", 2))),
         accounts = listOf(userAccount(username = "testy")),
         roles = null,
         accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
@@ -441,7 +441,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .body(
           BodyInserters.fromValue(
             UserMigrationRequest(
-              user = migratedUser(emails = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test@justice.gov.uk"))),
+              user = migratedUser(emails = listOf(migratedUserEmail("test@email.com", 1), migratedUserEmail("test@justice.gov.uk", 2))),
               accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
               roles = null,
               accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI")),
@@ -468,7 +468,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .body(
           BodyInserters.fromValue(
             UserMigrationRequest(
-              user = migratedUser(emails = listOf(migratedUserEmail("duplicate@email.com"), migratedUserEmail("duplicate@email.com"))),
+              user = migratedUser(emails = listOf(migratedUserEmail("duplicate@email.com", 1), migratedUserEmail("duplicate@email.com", 2))),
               accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI")),
               roles = null,
               accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "MDI")),
@@ -758,7 +758,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     )
 
     private fun migratedUser(
-      emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com"), migratedUserEmail("test-2@email.com")),
+      emails: List<MigratedUserEmail>? = listOf(migratedUserEmail("test@email.com", 1), migratedUserEmail("test-2@email.com", 2)),
       staffId: Long = Long.MAX_VALUE,
       firstName: String = "Test",
       lastName: String = "User",
@@ -772,8 +772,9 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       createdBy = "TEST_USER",
     )
 
-    private fun migratedUserEmail(email: String) = MigratedUserEmail(
+    private fun migratedUserEmail(email: String, legacyEmailId: Long) = MigratedUserEmail(
       email = email,
+      legacyEmailId = legacyEmailId,
       createdTimestamp = LocalDateTime.now(),
       createdBy = "TEST_USER",
     )
