@@ -19,7 +19,7 @@ fun UserMigrationRequest.toUser(): User {
       modifiedBy = modifiedBy,
     )
 
-    val emails = this.emails.orEmpty()
+    val emails = this.emails.orEmpty().sortedBy { it.legacyEmailId }
     val primaryEmail: String? = emails.firstOrNull { it.email.endsWith("@justice.gov.uk") }?.email ?: emails.firstOrNull()?.email
 
     emails.forEach {
