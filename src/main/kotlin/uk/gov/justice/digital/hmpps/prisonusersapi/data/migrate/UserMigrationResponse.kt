@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.prisonusersapi.data
+package uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema

@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service.converters
 
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.UserMigrationRequest
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
