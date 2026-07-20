@@ -26,7 +26,7 @@ class MigrationService(
   private val caseloadRepository: CaseloadRepository,
   private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
   private val userRoleRepository: UserRoleRepository,
-  private val primaryEmailDetector: PrimaryEmailDetector
+  private val primaryEmailDetector: PrimaryEmailDetector,
 ) {
 
   @Transactional

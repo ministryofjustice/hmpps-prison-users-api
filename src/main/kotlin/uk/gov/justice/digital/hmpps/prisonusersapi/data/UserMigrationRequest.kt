@@ -62,24 +62,24 @@ data class MigratedUser(
 @Schema(description = "Single NOMIS user email details", type = "object")
 data class MigratedUserEmail(
 
-    @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
-    override val email: String,
+  @Schema(required = true, description = "The email address for the user", type = "string", example = "test@email.com")
+  override val email: String,
 
-    @Schema(required = true, description = "The legacy NOMIS internet address ID for the email", example = "123456")
+  @Schema(required = true, description = "The legacy NOMIS internet address ID for the email", example = "123456")
   val legacyEmailId: Long,
 
-    @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
+  @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val createdTimestamp: LocalDateTime,
 
-    @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
+  @Schema(required = true, description = "Username of the record creator", type = "string", example = "TEST_USER")
   val createdBy: String,
 
-    @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
+  @Schema(description = "Record modification timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")
   val modifiedTimestamp: LocalDateTime? = null,
 
-    @Schema(description = "Username of the record modifier", type = "string", example = "TEST_USER")
+  @Schema(description = "Username of the record modifier", type = "string", example = "TEST_USER")
   val modifiedBy: String? = null,
-): EmailHolder
+) : EmailHolder
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "NOMIS User account details", type = "object")

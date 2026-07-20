@@ -21,7 +21,7 @@ class SyncService(
   private val userAccountRepository: UserAccountRepository,
   private val caseloadRepository: CaseloadRepository,
   private val userRoleRepository: UserRoleRepository,
-  private val primaryEmailDetector: PrimaryEmailDetector
+  private val primaryEmailDetector: PrimaryEmailDetector,
 ) {
 
   @Transactional
