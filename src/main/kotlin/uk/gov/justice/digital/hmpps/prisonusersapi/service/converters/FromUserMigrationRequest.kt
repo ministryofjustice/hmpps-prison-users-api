@@ -5,8 +5,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.PrimaryEmailDetector
 
-fun UserMigrationRequest.toUser(): User {
+fun UserMigrationRequest.toUser(primaryEmailDetector: PrimaryEmailDetector): User {
   with(this.user) {
     val user = User(
       firstName = firstName,
@@ -20,7 +21,7 @@ fun UserMigrationRequest.toUser(): User {
     )
 
     val emails = this.emails.orEmpty().sortedBy { it.legacyEmailId }
-    val primaryEmail: String? = emails.firstOrNull { it.email.endsWith("@justice.gov.uk") }?.email ?: emails.firstOrNull()?.email
+    val primaryEmail: String? = primaryEmailDetector.getPrimaryEmail(emails)
 
     emails.forEach {
       user.addUserEmail(

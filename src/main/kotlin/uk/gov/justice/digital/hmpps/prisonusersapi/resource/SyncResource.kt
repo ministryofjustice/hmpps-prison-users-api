@@ -9,13 +9,18 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 
 @RestController
 @RequestMapping("/sync")
-class SyncResource {
+class SyncResource(
+  private val syncService: SyncService,
+) {
 
   @PreAuthorize("hasRole('ROLE_PRISON_USERS_API__SYNC__RW')")
   @PutMapping("/user/{legacyStaffId}")
@@ -46,11 +51,20 @@ class SyncResource {
         description = "Unauthorized to access this endpoint",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "404",
+        description = "User not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun putPrisonUserForSync(
     @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
     @PathVariable
     legacyStaffId: Long,
-  ): ResponseEntity<Void> = ResponseEntity.noContent().build()
+    @RequestBody request: PrisonUserSyncRequest,
+  ): ResponseEntity<Void> {
+    syncService.syncUser(legacyStaffId, request)
+    return ResponseEntity.noContent().build()
+  }
 }

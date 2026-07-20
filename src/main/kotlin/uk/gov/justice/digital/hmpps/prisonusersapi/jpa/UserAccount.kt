@@ -74,6 +74,8 @@ data class UserAccount(
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
 
+  val lastLoggedIn: LocalDateTime? = null,
+
   val modifiedTimestamp: LocalDateTime? = null,
   val modifiedBy: String? = null,
 ) {

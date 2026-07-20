@@ -26,6 +26,7 @@ class MigrationService(
   private val caseloadRepository: CaseloadRepository,
   private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
   private val userRoleRepository: UserRoleRepository,
+  private val primaryEmailDetector: PrimaryEmailDetector
 ) {
 
   @Transactional
@@ -34,7 +35,7 @@ class MigrationService(
       throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.staffId} already exists")
     }
 
-    val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
+    val user = usersRepository.saveAndFlush(userMigrationRequest.toUser(primaryEmailDetector))
 
     val allCaseloadsById = loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest)
     val migratedAccessibleCaseloadsByUsername = userMigrationRequest.accessibleCaseloads?.groupBy { it.username }

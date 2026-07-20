@@ -57,6 +57,7 @@ fun User.toPrisonUserReconciliationResponse(
           )
         },
       activeCaseloadId = account.activeCaseload?.id,
+      lastLoggedIn = account.lastLoggedIn,
       createdTimestamp = account.createdTimestamp,
       createdBy = account.createdBy,
       modifiedTimestamp = account.modifiedTimestamp,
