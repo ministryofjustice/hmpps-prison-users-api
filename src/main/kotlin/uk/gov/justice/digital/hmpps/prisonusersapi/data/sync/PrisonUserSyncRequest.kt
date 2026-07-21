@@ -3,9 +3,9 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.data.sync
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.EmailHolder
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.EmailHolder
 import java.time.LocalDateTime
 import java.util.Collections.emptyList
 

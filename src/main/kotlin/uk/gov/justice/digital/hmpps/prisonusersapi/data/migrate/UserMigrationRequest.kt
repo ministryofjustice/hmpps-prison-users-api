@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.EmailHolder
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.EmailHolder
 import java.time.LocalDateTime
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
