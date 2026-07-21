@@ -82,7 +82,7 @@ data class SyncPrisonUserEmail(
     type = "string",
     example = "test@email.com",
   )
-  override var email: String? = null,
+  override val email: String,
 
   @Schema(
     required = true,
@@ -91,7 +91,7 @@ data class SyncPrisonUserEmail(
     format = "date-time",
     example = "2022-01-01T12:00:00",
   )
-  var createdTimestamp: LocalDateTime? = null,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(
     required = true,
@@ -99,7 +99,7 @@ data class SyncPrisonUserEmail(
     type = "string",
     example = "TEST_USER",
   )
-  var createdBy: String? = null,
+  val createdBy: String,
 
   @Schema(
     description = "Record modification timestamp",

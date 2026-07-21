@@ -48,10 +48,10 @@ class SyncService(
     request.emails.forEach { syncEmail ->
       updatedUser.addUserEmail(
         UserEmail(
-          email = requireNotNull(syncEmail.email),
+          email = syncEmail.email,
           isPrimary = syncEmail.email == primaryEmail,
-          createdBy = requireNotNull(syncEmail.createdBy),
-          createdTimestamp = requireNotNull(syncEmail.createdTimestamp),
+          createdBy = syncEmail.createdBy,
+          createdTimestamp = syncEmail.createdTimestamp,
           modifiedBy = syncEmail.modifiedBy,
           modifiedTimestamp = syncEmail.modifiedTimestamp,
           user = updatedUser,
