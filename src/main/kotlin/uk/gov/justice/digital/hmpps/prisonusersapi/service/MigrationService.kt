@@ -3,8 +3,8 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationRequest
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserMigrationResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.UserMigrationRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.UserMigrationResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
@@ -26,6 +26,7 @@ class MigrationService(
   private val caseloadRepository: CaseloadRepository,
   private val userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository,
   private val userRoleRepository: UserRoleRepository,
+  private val primaryEmailDetector: PrimaryEmailDetector,
 ) {
 
   @Transactional
@@ -34,7 +35,7 @@ class MigrationService(
       throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.staffId} already exists")
     }
 
-    val user = usersRepository.saveAndFlush(userMigrationRequest.toUser())
+    val user = usersRepository.saveAndFlush(userMigrationRequest.toUser(primaryEmailDetector))
 
     val allCaseloadsById = loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest)
     val migratedAccessibleCaseloadsByUsername = userMigrationRequest.accessibleCaseloads?.groupBy { it.username }

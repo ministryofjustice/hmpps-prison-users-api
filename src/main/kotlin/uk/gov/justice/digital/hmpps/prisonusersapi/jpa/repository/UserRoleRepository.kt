@@ -8,4 +8,5 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 @Repository
 interface UserRoleRepository : JpaRepository<UserRole, UserRoleId> {
   fun findAllByIdUsernameIn(usernames: Collection<String>): List<UserRole>
+  fun deleteAllByIdUsernameIn(usernames: Collection<String>)
 }

@@ -1,6 +1,9 @@
+package uk.gov.justice.digital.hmpps.prisonusersapi.data.sync
+
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.EmailHolder
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import java.time.LocalDateTime
@@ -79,7 +82,7 @@ data class SyncPrisonUserEmail(
     type = "string",
     example = "test@email.com",
   )
-  var email: String? = null,
+  override val email: String,
 
   @Schema(
     required = true,
@@ -88,7 +91,7 @@ data class SyncPrisonUserEmail(
     format = "date-time",
     example = "2022-01-01T12:00:00",
   )
-  var createdTimestamp: LocalDateTime? = null,
+  val createdTimestamp: LocalDateTime,
 
   @Schema(
     required = true,
@@ -96,7 +99,7 @@ data class SyncPrisonUserEmail(
     type = "string",
     example = "TEST_USER",
   )
-  var createdBy: String? = null,
+  val createdBy: String,
 
   @Schema(
     description = "Record modification timestamp",
@@ -108,7 +111,7 @@ data class SyncPrisonUserEmail(
 
   @Schema(description = "Username of the record modifier", type = "string", example = "TEST_USER")
   val modifiedBy: String? = null,
-)
+) : EmailHolder
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "User account details to sync from NOMIS", type = "object")
