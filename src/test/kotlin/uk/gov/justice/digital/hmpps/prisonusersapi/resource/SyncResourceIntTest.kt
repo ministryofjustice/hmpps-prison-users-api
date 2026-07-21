@@ -297,7 +297,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .jsonPath("accounts[0].username").isEqualTo("SYNC_USER")
         .jsonPath("accounts[0].roles.length()").isEqualTo(3)
         .jsonPath("accounts[0].roles[0].roleCode").isEqualTo("ROLE_NEW_ONE")
-        .jsonPath("accounts[0].roles[1].roleCode").isEqualTo("ROLE_NEW_THREE") // H < W alphabetically
+        .jsonPath("accounts[0].roles[1].roleCode").isEqualTo("ROLE_NEW_THREE")
         .jsonPath("accounts[0].roles[2].roleCode").isEqualTo("ROLE_NEW_TWO")
         // OLD roles should be gone
         .jsonPath("accounts[1].username").isEqualTo("SYNC_USER_ADMIN")
