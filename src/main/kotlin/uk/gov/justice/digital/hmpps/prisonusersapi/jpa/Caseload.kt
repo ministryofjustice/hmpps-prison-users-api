@@ -17,6 +17,8 @@ data class Caseload(
 
   val name: String,
   val function: String,
+  val administrationCaseload: Boolean = false,
+  val active: Boolean = true,
   val createdBy: String,
 ) {
   fun isDpsCaseload(): Boolean = id == DPS_CASELOAD
@@ -30,4 +32,8 @@ data class Caseload(
   }
 
   override fun hashCode(): Int = id.hashCode()
+
+  companion object {
+    const val GENERAL_CASELOAD = "GENERAL"
+  }
 }
