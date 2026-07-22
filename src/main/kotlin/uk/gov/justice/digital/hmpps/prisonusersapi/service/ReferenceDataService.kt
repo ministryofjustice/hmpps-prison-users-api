@@ -9,6 +9,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toPrisonCa
 @Service
 class ReferenceDataService(private val caseloadRepository: CaseloadRepository) {
 
-    fun getActiveGeneralCaseloads(): List<PrisonCaseload> = caseloadRepository.findByActiveAndFunctionAndAdministrationCaseloadTrueOrderByNameAsc(true, GENERAL_CASELOAD)
-        .map { it.toPrisonCaseload() }
+  fun getActiveGeneralCaseloads(): List<PrisonCaseload> = caseloadRepository.findByActiveAndFunctionAndAdministrationCaseloadTrueOrderByNameAsc(true, GENERAL_CASELOAD)
+    .map { it.toPrisonCaseload() }
 }
