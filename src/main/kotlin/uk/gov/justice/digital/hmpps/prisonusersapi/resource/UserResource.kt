@@ -10,6 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
@@ -62,4 +64,43 @@ class UserResource(
     @PathVariable
     username: String,
   ) = userService.findUserBasicDetails(username)
+
+  @PreAuthorize("hasAnyRole('ROLE_MAINTAIN_ACCESS_ROLES_ADMIN', 'ROLE_MAINTAIN_ACCESS_ROLES', 'ROLE_MANAGE_NOMIS_USER_ACCOUNT', 'ROLE_VIEW_NOMIS_STAFF_DETAILS')")
+  @PostMapping("/basic/find-by-usernames")
+  @Operation(
+    summary = "Get user basic details",
+    description = "Information on specific users. Requires role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN or ROLE_MAINTAIN_ACCESS_ROLES or ROLE_MANAGE_NOMIS_USER_ACCOUNT or ROLE_VIEW_NOMIS_STAFF_DETAILS",
+    security = [
+      SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES_ADMIN"), SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES"),
+      SecurityRequirement(
+        name = "ROLE_MANAGE_NOMIS_USER_ACCOUNT",
+      ),
+    ],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User Information Returned",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Incorrect request to get user information",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to get a user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getUserBasicDetailsByUsernames(
+    @Schema(description = "Usernames", example = "username1,username2", required = true)
+    @RequestBody
+    usernames: List<String>,
+  ) = userService.findUserBasicDetails(usernames)
 }
