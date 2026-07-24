@@ -16,6 +16,9 @@ interface UserAccountRepository : JpaRepository<UserAccount, String> {
   @EntityGraph(value = "UserAccount.withUserAndActiveCaseload", type = EntityGraph.EntityGraphType.LOAD)
   fun findByUsername(username: String): Optional<UserAccount>
 
+  @EntityGraph(value = "UserAccount.withUserAndActiveCaseload", type = EntityGraph.EntityGraphType.LOAD)
+  fun findByUsernameIn(usernames: List<String>): List<UserAccount>
+
   @EntityGraph(value = "UserAccount.withCaseloads", type = EntityGraph.EntityGraphType.LOAD)
   fun findAllByUserUserId(userId: UUID): List<UserAccount>
 
