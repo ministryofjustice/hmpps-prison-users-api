@@ -26,8 +26,8 @@ class UserService(
   @Transactional(readOnly = true)
   fun findUserBasicDetails(usernames: List<String>): Map<String, UserBasicDetails> {
     log.info("Fetching user basic details for {} usernames", usernames.size)
-    val userDetails = userBasicDetailsRepository.find(usernames)
-      .map(this::toUserBasicDetail)
+    val userDetails = userAccountRepository.findByUsernameIn(usernames)
+      .map { it.toUserBasicDetails() }
       .associateBy { it.username }
     log.info("Returning {} user basic details for {} usernames", userDetails.size, usernames.size)
     return userDetails
