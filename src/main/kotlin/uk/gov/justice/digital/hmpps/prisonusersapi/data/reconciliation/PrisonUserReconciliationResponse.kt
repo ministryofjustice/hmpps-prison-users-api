@@ -15,7 +15,7 @@ data class PrisonUserReconciliationResponse(
   @Schema(description = "The unique identifier for the prison user", type = "string", format = "uuid", example = "f59dad25-3f11-4a74-9e03-64d2ee53f498")
   val userId: UUID,
 
-  @Schema(description = "The NOMIS staff id", type = "integer", format = "int64", example = "123456")
+  @Schema(description = "The NOMIS staff id", example = "123456")
   val staffId: Long,
 
   @Schema(required = true, description = "First name of the user", type = "string", example = "John")
