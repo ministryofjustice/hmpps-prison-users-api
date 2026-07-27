@@ -18,6 +18,7 @@ data class Caseload(
   val name: String,
   val function: String,
   val administrationCaseload: Boolean = false,
+  val userAssignable: Boolean = false,
   val active: Boolean = true,
   val createdBy: String,
 ) {
