@@ -72,7 +72,7 @@ class UserResource(
     description = "Information on specific users. Requires role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN or ROLE_MAINTAIN_ACCESS_ROLES or ROLE_MANAGE_NOMIS_USER_ACCOUNT or ROLE_VIEW_NOMIS_STAFF_DETAILS",
     security = [
       SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES_ADMIN"), SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES"),
-      SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT",), SecurityRequirement(name = "VIEW_NOMIS_STAFF_DETAILS"),
+      SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT"), SecurityRequirement(name = "VIEW_NOMIS_STAFF_DETAILS"),
     ],
     responses = [
       ApiResponse(
