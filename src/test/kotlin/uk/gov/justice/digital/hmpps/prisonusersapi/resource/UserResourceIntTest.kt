@@ -164,7 +164,7 @@ class UserResourceIntTest : IntegrationTestBase() {
 
     @Test
     fun `user not found`() {
-      val usernames = listOf("marco.rossi")
+      val usernames = listOf("not.found")
       webTestClient.post().uri(uri)
         .bodyValue(usernames)
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))

@@ -25,6 +25,7 @@ class UserService(
 
   @Transactional(readOnly = true)
   fun findUserBasicDetails(usernames: List<String>): Map<String, UserBasicDetails> {
+    if (usernames.isEmpty()) return emptyMap()
     log.info("Fetching user basic details for {} usernames", usernames.size)
     val userDetails = userAccountRepository.findByUsernameIn(usernames)
       .map { it.toUserBasicDetails() }
@@ -34,7 +35,7 @@ class UserService(
   }
 
   companion object {
-    private val log = LoggerFactory.getLogger(this::class.java)
+    private val log = LoggerFactory.getLogger(UserService::class.java)
   }
 }
 

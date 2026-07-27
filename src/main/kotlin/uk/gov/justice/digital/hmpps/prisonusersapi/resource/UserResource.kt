@@ -72,9 +72,7 @@ class UserResource(
     description = "Information on specific users. Requires role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN or ROLE_MAINTAIN_ACCESS_ROLES or ROLE_MANAGE_NOMIS_USER_ACCOUNT or ROLE_VIEW_NOMIS_STAFF_DETAILS",
     security = [
       SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES_ADMIN"), SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES"),
-      SecurityRequirement(
-        name = "ROLE_MANAGE_NOMIS_USER_ACCOUNT",
-      ),
+      SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT",), SecurityRequirement(name = "VIEW_NOMIS_STAFF_DETAILS"),
     ],
     responses = [
       ApiResponse(
@@ -99,7 +97,7 @@ class UserResource(
     ],
   )
   fun getUserBasicDetailsByUsernames(
-    @Schema(description = "Usernames", example = "username1,username2", required = true)
+    @Schema(description = "Usernames", example = "[\"username1\",\"username2\"]", required = true)
     @RequestBody
     usernames: List<String>,
   ) = userService.findUserBasicDetails(usernames)
