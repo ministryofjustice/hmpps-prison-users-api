@@ -209,4 +209,92 @@ class UserResourceIntTest : IntegrationTestBase() {
         .jsonPath("['$username'].staffId").exists()
     }
   }
+
+  @DisplayName("GET /users/{username}")
+  @Nested
+  inner class GetUserByUsername {
+    @BeforeEach
+    internal fun createUsers() {
+      with(dataBuilder) {
+        generalUser().username("marco.rossi").firstName("Marco").lastName("Rossi").buildAndSave()
+      }
+    }
+
+    @AfterEach
+    internal fun deleteUsers() = dataBuilder.deleteAll()
+
+    @Test
+    fun `access forbidden when no authority`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .exchange()
+        .expectStatus().isUnauthorized
+    }
+
+    @Test
+    fun `access forbidden when no role`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf()))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `get user forbidden with wrong role`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `get user not found`() {
+      webTestClient.get().uri("/users/dummy")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+        .exchange()
+        .expectStatus().isNotFound
+    }
+
+    @Test
+    fun `get user with role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("username").isEqualTo("marco.rossi")
+        .jsonPath("firstName").isEqualTo("Marco")
+        .jsonPath("lastName").isEqualTo("Rossi")
+        .jsonPath("staffId").exists()
+    }
+
+    @Test
+    fun `get user with role ROLE_MAINTAIN_ACCESS_ROLES`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
+    }
+
+    @Test
+    fun `get user with role ROLE_MANAGE_NOMIS_USER_ACCOUNT`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
+    }
+
+    @Test
+    fun `get user with role ROLE_VIEW_NOMIS_STAFF_DETAILS`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_NOMIS_STAFF_DETAILS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
+    }
+  }
 }

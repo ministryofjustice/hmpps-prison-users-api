@@ -36,10 +36,14 @@ class UserService(
     return userDetails
   }
 
-  @Transactional(readOnly = true)
-  fun findByUsername(username: String): UserDetail = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
-    .map { it.toUserDetail() }
-    .orElseThrow(UserNotFoundException("User $username not found"))
+   @Transactional(readOnly = true)
+   fun findByUsername(username: String): UserDetail {
+     val userAccount = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
+       .orElseThrow(UserNotFoundException("User $username not found"))
+     // Initialize userEmails within transaction to avoid lazy loading issues
+     userAccount.user.userEmails.size
+     return userAccount.toUserDetail()
+   }
 
   companion object {
     private val log = LoggerFactory.getLogger(UserService::class.java)

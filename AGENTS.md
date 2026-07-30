@@ -9,15 +9,17 @@
 - `UserAccount` is the main lookup root for read APIs; it links to `User`, `activeCaseload`, and `userAccessibleCaseloads` (`jpa/UserAccount.kt`).
 - Read endpoints currently expose:
   - `GET /users/basic/{username}` in `resource/UserResource.kt`
+  - `POST /users/basic/find-by-usernames` in `resource/UserResource.kt` (bulk lookup by username list)
+  - `GET /users/{username}` in `resource/UserResource.kt` (full `UserDetail` response)
   - `GET /users/{username}/caseloads` in `resource/UserCaseloadManagementResource.kt`
   - `GET /reconciliation/user/{legacyStaffId}` in `resource/ReconciliationResource.kt` (fully wired to `service/ReconciliationService.kt` and repositories)
-- Migration writes are handled in one transaction in `service/MigrationService.kt`: create `User`, validate caseloads, save `UserAccount`s, then save roles and accessible caseload join rows.
-- `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` is currently a controller-level stub (no service/repository wiring yet).
-- Response DTOs for reconciliation and sync are in `data/reconciliation/` (e.g. `PrisonUserReconciliationResponse.kt`) and `data/sync/` (e.g. `PrisonUserSyncRequest.kt`), with converters like `User.toPrisonUserReconciliationResponse()` in `service/converters/FromUser.kt`.
+- Migration writes are handled in one transaction in `service/MigrationService.kt`: create `User`, validate caseloads, save `UserAccount`s, then save roles and accessible caseload join rows. Exposed via `POST /migrate/user` in `resource/MigrationResource.kt` (requires `ROLE_PRISON_USERS_API__MIGRATION__RW`).
+- `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` is fully wired to `service/SyncService.kt` (transactional; updates user, emails, roles, and caseloads in one transaction). Requires `ROLE_PRISON_USERS_API__SYNC__RW`.
+- Response DTOs for reconciliation and sync are in `data/reconciliation/` (e.g. `PrisonUserReconciliationResponse.kt`) and `data/sync/` (e.g. `PrisonUserSyncRequest.kt`); migration DTOs are in `data/migrate/` (e.g. `UserMigrationRequest.kt`, `UserMigrationResponse.kt`). Converters like `User.toPrisonUserReconciliationResponse()` live in `service/converters/FromUser.kt`.
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/`; `V1_0__create_tables.sql` is the quickest way to understand table ownership/cascade rules.
 
 ## Local run / build / test
-- **Build tooling**: Kotlin 2.4.0, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.0-beta2. hmpps-kotlin-spring-boot-starter is also at beta (3.0.0-beta2).
+- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.1. hmpps-kotlin-spring-boot-starter 3.0.0 (test starter still at 3.0.0-beta2).
 - Build the jar: `./gradlew clean assemble`
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
 - Run only auth, then start the app from IntelliJ with profile `dev`: `docker compose pull && docker compose up --scale hmpps-prison-users-api=0`
@@ -26,7 +28,7 @@
 
 ## Project-specific conventions
 - Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it.
-- OpenAPI annotations are kept directly on controller methods and DTOs (`resource/*.kt`, `data/UserMigrationRequest.kt`). Swagger/OpenAPI is enabled in `dev` and `test`, disabled in base `application.yml`.
+- OpenAPI annotations are kept directly on controller methods and DTOs (`resource/*.kt`, `data/migrate/UserMigrationRequest.kt`). Swagger/OpenAPI is enabled in `dev` and `test`, disabled in base `application.yml`.
 - Error responses are centralized in `config/PrisonUsersApiExceptionHandler.kt`; prefer throwing the named service exceptions already used there rather than returning ad hoc `ResponseEntity` errors.
 - Mapping logic belongs in `service/converters/`, not controllers. Example: `FromUserAccount.kt` title-cases names and strips DPS caseloads when `removeDpsCaseload = true`. For endpoints returning detailed response objects (e.g., `PrisonUserReconciliationResponse`), converters are extension functions on domain entities (e.g., `User.toPrisonUserReconciliationResponse()` in `FromUser.kt`).
 - Reads are explicitly `@Transactional(readOnly = true)` in services (`service/UserService.kt`); writes keep the transaction at service level (`MigrationService.kt`).

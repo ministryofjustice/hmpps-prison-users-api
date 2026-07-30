@@ -54,23 +54,8 @@ import java.time.LocalDateTime
     NamedAttributeNode("username"),
     NamedAttributeNode("accountStatus"),
     NamedAttributeNode("activeCaseload"),
-    NamedAttributeNode("user", subgraph = "User.emails"),
-
+    NamedAttributeNode("user"),
     NamedAttributeNode("userRoleCodes"),
-  ],
-  subgraphs = [
-    NamedSubgraph(
-      name = "User.emails",
-      attributeNodes = [
-        NamedAttributeNode(value = "userId"),
-        NamedAttributeNode(value = "entraUUID"),
-        NamedAttributeNode(value = "firstName"),
-        NamedAttributeNode(value = "lastName"),
-        NamedAttributeNode(value = "status"),
-        NamedAttributeNode(value = "legacyStaffId"),
-        NamedAttributeNode(value = "userEmails"),
-      ],
-    ),
   ],
 )
 data class UserAccount(
