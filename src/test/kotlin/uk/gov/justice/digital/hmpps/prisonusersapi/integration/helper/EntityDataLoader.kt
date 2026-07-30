@@ -154,6 +154,11 @@ abstract class UserAccountBuilder<T>(
     return this
   }
 
+  fun withLastLogonDate(lastLogonDate: LocalDateTime): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(lastLoggedIn = lastLogonDate)
+    return this
+  }
+
   fun username(username: String): UserAccountBuilder<T> {
     this.userAccount = userAccount.copy(username = username)
     return this

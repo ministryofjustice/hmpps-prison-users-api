@@ -13,6 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import java.time.LocalDateTime
 
 class UserResourceIntTest : IntegrationTestBase() {
   @Autowired
@@ -213,6 +214,8 @@ class UserResourceIntTest : IntegrationTestBase() {
   @DisplayName("GET /users/{username}")
   @Nested
   inner class GetUserByUsername {
+    private val expectedLastLogonDate = LocalDateTime.of(2026, 7, 1, 9, 10, 11)
+
     @BeforeEach
     internal fun createUsers() {
       with(dataBuilder) {
@@ -222,6 +225,7 @@ class UserResourceIntTest : IntegrationTestBase() {
           .lastName("Rossi")
           .withRoleCodes("DPS_USER", "DPS_ADMIN")
           .withPrimaryEmail("marco.rossi@justice.gov.uk")
+          .withLastLogonDate(expectedLastLogonDate)
           .buildAndSave()
       }
     }
@@ -284,7 +288,7 @@ class UserResourceIntTest : IntegrationTestBase() {
         .jsonPath("active").isEqualTo(true)
         .jsonPath("staffStatus").isEqualTo("ACTIVE")
         .jsonPath("primaryEmail").isEqualTo("marco.rossi@justice.gov.uk")
-        .jsonPath("lastLogonDate").doesNotExist()
+        .jsonPath("lastLogonDate").isEqualTo("2026-07-01T09:10:11")
     }
 
     @Test
