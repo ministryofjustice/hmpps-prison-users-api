@@ -88,6 +88,7 @@ class MigrationService(
               userRoles.add(
                 UserRole(
                   it,
+                  userAccount,
                   migratedUserRole.createdBy,
                   migratedUserRole.createdTimestamp,
                 ),

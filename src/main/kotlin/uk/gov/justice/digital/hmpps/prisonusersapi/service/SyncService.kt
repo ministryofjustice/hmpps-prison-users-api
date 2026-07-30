@@ -134,16 +134,17 @@ class SyncService(
         )
       }
 
-      // Insert new roles via repository (no JPA cascade path).
-      userRoleRepository.saveAll(
-        syncAccount.roles.map { syncRole ->
+      // Insert new roles into the managed collection so JPA handles the INSERT via cascade.
+      syncAccount.roles.forEach { syncRole ->
+        account.userRoleCodes.add(
           UserRole(
             id = UserRoleId(account.username, syncRole.roleCode),
+            userAccount = account,
             createdBy = syncRole.createdBy,
             createdTimestamp = syncRole.createdTimestamp,
-          )
-        },
-      )
+          ),
+        )
+      }
 
       // Insert new accessible caseloads into the managed collection so JPA handles the INSERT via cascade.
       syncAccount.caseloads.forEach { syncCaseload ->

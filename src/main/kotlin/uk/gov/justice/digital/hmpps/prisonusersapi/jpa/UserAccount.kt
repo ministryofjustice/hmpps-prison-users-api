@@ -48,6 +48,31 @@ import java.time.LocalDateTime
     NamedAttributeNode("user"),
   ],
 )
+@NamedEntityGraph(
+  name = "UserAccount.withUserActiveCaseloadUserRoleCodes",
+  attributeNodes = [
+    NamedAttributeNode("username"),
+    NamedAttributeNode("accountStatus"),
+    NamedAttributeNode("activeCaseload"),
+    NamedAttributeNode("user", subgraph = "User.emails"),
+
+    NamedAttributeNode("userRoleCodes"),
+  ],
+  subgraphs = [
+    NamedSubgraph(
+      name = "User.emails",
+      attributeNodes = [
+        NamedAttributeNode(value = "userId"),
+        NamedAttributeNode(value = "entraUUID"),
+        NamedAttributeNode(value = "firstName"),
+        NamedAttributeNode(value = "lastName"),
+        NamedAttributeNode(value = "status"),
+        NamedAttributeNode(value = "legacyStaffId"),
+        NamedAttributeNode(value = "userEmails"),
+      ],
+    ),
+  ],
+)
 data class UserAccount(
 
   @Id
@@ -71,6 +96,9 @@ data class UserAccount(
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
 
+  @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
+  val userRoleCodes: MutableList<UserRole> = mutableListOf(),
+
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
 
@@ -80,8 +108,18 @@ data class UserAccount(
   val modifiedBy: String? = null,
 ) {
 
-  private fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
-  fun isEnabled(): Boolean = !isLocked()
+  fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
+  fun isAccountNonLocked(): Boolean = !isLocked()
+  fun isEnabled(): Boolean = isAccountNonLocked()
+  fun isAdmin(): Boolean = accountType == UsageType.ADMIN
+  fun isCredentialsNonExpired(): Boolean = AccountStatus.entries.filterNot {
+    it in setOf(
+      AccountStatus.EXPIRED,
+      AccountStatus.EXPIRED_LOCKED,
+      AccountStatus.EXPIRED_LOCKED_TIMED,
+    )
+  }.contains(accountStatus)
+  fun isActive(): Boolean = AccountStatus.entries.filter { !(it.isLocked || (it.isExpired && !it.isGracePeriod)) }.contains(accountStatus)
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
