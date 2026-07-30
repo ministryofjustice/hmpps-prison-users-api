@@ -216,7 +216,13 @@ class UserResourceIntTest : IntegrationTestBase() {
     @BeforeEach
     internal fun createUsers() {
       with(dataBuilder) {
-        generalUser().username("marco.rossi").firstName("Marco").lastName("Rossi").buildAndSave()
+        generalUser()
+          .username("marco.rossi")
+          .firstName("Marco")
+          .lastName("Rossi")
+          .withRoleCodes("DPS_USER", "DPS_ADMIN")
+          .withPrimaryEmail("marco.rossi@justice.gov.uk")
+          .buildAndSave()
       }
     }
 
@@ -262,9 +268,23 @@ class UserResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("username").isEqualTo("marco.rossi")
+        .jsonPath("staffId").isEqualTo(123456)
         .jsonPath("firstName").isEqualTo("Marco")
         .jsonPath("lastName").isEqualTo("Rossi")
-        .jsonPath("staffId").exists()
+        .jsonPath("activeCaseloadId").isEqualTo("WWI")
+        .jsonPath("accountStatus").isEqualTo("OPEN")
+        .jsonPath("accountType").isEqualTo("GENERAL")
+        .jsonPath("dpsRoleCodes.length()").isEqualTo(2)
+        .jsonPath("dpsRoleCodes[0]").isEqualTo("DPS_USER")
+        .jsonPath("dpsRoleCodes[1]").isEqualTo("DPS_ADMIN")
+        .jsonPath("accountNonLocked").isEqualTo(true)
+        .jsonPath("credentialsNonExpired").isEqualTo(true)
+        .jsonPath("enabled").isEqualTo(true)
+        .jsonPath("admin").isEqualTo(false)
+        .jsonPath("active").isEqualTo(true)
+        .jsonPath("staffStatus").isEqualTo("ACTIVE")
+        .jsonPath("primaryEmail").isEqualTo("marco.rossi@justice.gov.uk")
+        .jsonPath("lastLogonDate").doesNotExist()
     }
 
     @Test
