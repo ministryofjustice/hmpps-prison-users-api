@@ -40,8 +40,6 @@ class UserService(
   fun findByUsername(username: String): UserDetail {
     val userAccount = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
-    // Initialize userEmails within transaction to avoid lazy loading issues
-    userAccount.user.userEmails.size
     return userAccount.toUserDetail()
   }
 

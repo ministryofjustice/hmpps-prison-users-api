@@ -45,7 +45,18 @@ import java.time.LocalDateTime
     NamedAttributeNode("username"),
     NamedAttributeNode("accountStatus"),
     NamedAttributeNode("activeCaseload"),
-    NamedAttributeNode("user"),
+    NamedAttributeNode("user", subgraph = "UserAccount.user"),
+  ],
+  subgraphs = [
+    NamedSubgraph(
+      name = "UserAccount.user",
+      attributeNodes = [
+        NamedAttributeNode("legacyStaffId"),
+        NamedAttributeNode("firstName"),
+        NamedAttributeNode("lastName"),
+        NamedAttributeNode(value = "userEmails"),
+      ],
+    ),
   ],
 )
 @NamedEntityGraph(
@@ -93,18 +104,18 @@ data class UserAccount(
   val modifiedBy: String? = null,
 ) {
 
-  fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
+  fun isLocked(): Boolean = accountStatus.isLocked
   fun isAccountNonLocked(): Boolean = !isLocked()
   fun isEnabled(): Boolean = isAccountNonLocked()
   fun isAdmin(): Boolean = accountType == UsageType.ADMIN
-  fun isCredentialsNonExpired(): Boolean = AccountStatus.entries.filterNot {
-    it in setOf(
-      AccountStatus.EXPIRED,
-      AccountStatus.EXPIRED_LOCKED,
-      AccountStatus.EXPIRED_LOCKED_TIMED,
-    )
-  }.contains(accountStatus)
-  fun isActive(): Boolean = AccountStatus.entries.filter { !(it.isLocked || (it.isExpired && !it.isGracePeriod)) }.contains(accountStatus)
+
+  fun isCredentialsNonExpired(): Boolean = accountStatus !in setOf(
+    AccountStatus.EXPIRED,
+    AccountStatus.EXPIRED_LOCKED,
+    AccountStatus.EXPIRED_LOCKED_TIMED,
+  )
+
+  fun isActive(): Boolean = accountStatus in AccountStatus.activeStatuses()
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
