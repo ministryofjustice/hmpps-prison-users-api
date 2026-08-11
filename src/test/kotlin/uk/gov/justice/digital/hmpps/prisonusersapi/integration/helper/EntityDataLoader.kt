@@ -50,7 +50,7 @@ fun defaultGeneralUserAccount(): UserAccount = UserAccount(
   user = defaultUser(),
   accountType = UsageType.GENERAL,
   accountStatus = AccountStatus.OPEN,
-  activeCaseload = Caseload("WWI", "WWI", "GENERAL", "TEST"),
+  activeCaseload = Caseload("WWI", "WWI", "GENERAL", administrationCaseload = true, active = true, userAssignable = true, createdBy = "TEST"),
   userAccessibleCaseloads = mutableListOf(),
   createdBy = "TEST",
   createdTimestamp = LocalDateTime.now(),
@@ -80,7 +80,7 @@ class GeneralUserBuilder(
 
   override fun build(): GeneralUserBuilder {
     val caseloads = prisonCodes.map {
-      val caseload = Caseload(it, "Description for $it", "Function for $it", "TEST")
+      val caseload = Caseload(it, "Description for $it", "Function for $it", administrationCaseload = true, active = true, userAssignable = true, createdBy = "TEST")
       UserAccessibleCaseload(
         UserAccessibleCaseloadId(userAccount.username, it),
         caseload,
