@@ -17,7 +17,7 @@
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/`; `V1_0__create_tables.sql` is the quickest way to understand table ownership/cascade rules.
 
 ## Local run / build / test
-- **Build tooling**: Kotlin 2.4.0, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.0-beta2. hmpps-kotlin-spring-boot-starter is also at beta (3.0.0-beta2).
+- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.1. `hmpps-kotlin-spring-boot-starter` is 3.0.0, with `hmpps-kotlin-spring-boot-starter-test` still at 3.0.0-beta2.
 - Build the jar: `./gradlew clean assemble`
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
 - Run only auth, then start the app from IntelliJ with profile `dev`: `docker compose pull && docker compose up --scale hmpps-prison-users-api=0`
@@ -41,5 +41,8 @@
 ## Configuration and integrations
 - Auth is HMPPS Auth as an OAuth2 resource server; JWT keys come from `${hmpps-auth.url}/.well-known/jwks.json` (`src/main/resources/application.yml`).
 - `dev` uses in-memory H2 with Flyway (`application-dev.yml`); deployed environments use PostgreSQL with datasource values injected from Kubernetes secrets (`helm_deploy/hmpps-prison-users-api/values.yaml`).
+- `application.yml` enables graceful shutdown and health probes; Spring Boot management endpoints are exposed at `/`, with `/health` and `/info` available for readiness/liveness and diagnostics.
+- `build.gradle.kts` temporarily pins `springdoc-openapi-starter-webmvc-ui` to 3.0.2 and constrains `org.webjars:swagger-ui` to 5.32.2; keep those in sync when changing OpenAPI tooling.
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
+- For broader HMPPS Kotlin conventions, see the "Common Kotlin patterns" section in `README.md` and the linked tech docs; the project is community managed via `#kotlin-dev`.
 - If you add endpoints, remember there are tests asserting security coverage and OpenAPI availability/validity (`integration/ResourceSecurityTest.kt`, `integration/OpenApiDocsTest.kt`).
