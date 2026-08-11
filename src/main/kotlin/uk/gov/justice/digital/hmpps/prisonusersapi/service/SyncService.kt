@@ -4,6 +4,7 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
@@ -27,20 +28,33 @@ class SyncService(
   @Transactional
   fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest) {
     val user = usersRepository.findByLegacyStaffId(legacyStaffId)
-      .orElseThrow(UserNotFoundException("User with legacy staff id $legacyStaffId not found"))
+      .map {
+        it.copy(
+          firstName = request.firstName,
+          lastName = request.lastName,
+          status = request.status,
+          modifiedTimestamp = request.modifiedTimestamp,
+          modifiedBy = request.modifiedBy,
+          userEmails = mutableListOf(),
+        )
+      }
+      .orElseGet {
+        User(
+          firstName = request.firstName,
+          lastName = request.lastName,
+          status = request.status,
+          legacyStaffId = legacyStaffId,
+          createdTimestamp = request.createdTimestamp,
+          createdBy = request.createdBy,
+          modifiedTimestamp = request.modifiedTimestamp,
+          modifiedBy = request.modifiedBy,
+          userEmails = mutableListOf(),
+        )
+      }
 
-    // Update User scalar fields. Pass an empty userEmails list so JPA orphanRemoval
-    // automatically deletes the old emails during the merge/flush.
-    val updatedUser = usersRepository.saveAndFlush(
-      user.copy(
-        firstName = request.firstName,
-        lastName = request.lastName,
-        status = request.status,
-        modifiedTimestamp = request.modifiedTimestamp,
-        modifiedBy = request.modifiedBy,
-        userEmails = mutableListOf(),
-      ),
-    )
+    // Update or create the User scalar fields. Pass an empty userEmails list so JPA
+    // orphanRemoval automatically deletes the old emails during the merge/flush.
+    val updatedUser = usersRepository.saveAndFlush(user)
 
     // Insert new emails directly into the managed collection so JPA handles the INSERT via cascade.
     val primaryEmail = primaryEmailDetector.getPrimaryEmail(request.emails)
@@ -60,7 +74,7 @@ class SyncService(
     }
 
     // Load existing accounts for this user (with caseloads eagerly via withCaseloads graph).
-    val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(user.userId))
+    val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(updatedUser.userId))
     val requestAccountsByUsername = request.accounts.associateBy { it.username }
 
     // Remove accounts that are no longer present in the sync request.
