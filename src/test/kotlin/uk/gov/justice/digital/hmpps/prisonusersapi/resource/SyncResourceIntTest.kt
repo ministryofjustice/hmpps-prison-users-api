@@ -110,17 +110,57 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .expectStatus().isForbidden
     }
 
-    // ── Not found ────────────────────────────────────────────────────────────
+    // ── Creation when the user does not exist ────────────────────────────────
 
     @Test
-    fun `returns 404 when user does not exist`() {
+    fun `creates user when it does not exist`() {
       webTestClient.put().uri("/sync/user/999999")
         .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
-        .body(BodyInserters.fromValue(minimalSyncRequest()))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              firstName = "CreatedFirst",
+              lastName = "CreatedLast",
+              emails = listOf(
+                syncEmail("created.user@justice.gov.uk"),
+              ),
+              accounts = listOf(
+                syncAccount(
+                  username = "NEW_SYNC_USER",
+                  activeCaseloadId = "LEI",
+                  roles = listOf(syncRole("ROLE_CREATED_ONE")),
+                ),
+                syncAccount(
+                  username = "NEW_SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
+              ),
+            ),
+          ),
+        )
         .exchange()
-        .expectStatus().isNotFound
+        .expectStatus().isNoContent
+
+      webTestClient.get().uri("/reconciliation/user/999999")
+        .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
+        .exchange()
+        .expectStatus().isOk
         .expectBody()
-        .jsonPath("userMessage").isEqualTo("User not found: User with legacy staff id 999999 not found")
+        .jsonPath("staffId").isEqualTo(999999)
+        .jsonPath("firstName").isEqualTo("CreatedFirst")
+        .jsonPath("lastName").isEqualTo("CreatedLast")
+        .jsonPath("status").isEqualTo("ACTIVE")
+        .jsonPath("emails.length()").isEqualTo(1)
+        .jsonPath("emails[0].email").isEqualTo("created.user@justice.gov.uk")
+        .jsonPath("emails[0].isPrimary").isEqualTo(true)
+        .jsonPath("accounts.length()").isEqualTo(2)
+        .jsonPath("accounts[0].username").isEqualTo("NEW_SYNC_USER")
+        .jsonPath("accounts[0].roles.length()").isEqualTo(1)
+        .jsonPath("accounts[0].roles[0].roleCode").isEqualTo("ROLE_CREATED_ONE")
+        .jsonPath("accounts[1].username").isEqualTo("NEW_SYNC_USER_ADMIN")
+        .jsonPath("accounts[1].caseloads.length()").isEqualTo(1)
+        .jsonPath("accounts[1].caseloads[0].caseloadId").isEqualTo("MDI")
     }
 
     // ── Scalar field updates ─────────────────────────────────────────────────

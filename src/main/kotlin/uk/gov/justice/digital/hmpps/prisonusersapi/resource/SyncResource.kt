@@ -53,7 +53,7 @@ class SyncResource(
       ),
       ApiResponse(
         responseCode = "404",
-        description = "User not found",
+        description = "Caseload not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
