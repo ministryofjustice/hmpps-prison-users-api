@@ -30,17 +30,7 @@ class SyncService(
   fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest) {
     val updatedUser = usersRepository.findByLegacyStaffIdForUpdate(legacyStaffId)
       .map {
-        // Pass an empty userEmails list so orphanRemoval deletes previous rows before re-insert.
-        usersRepository.saveAndFlush(
-          it.copy(
-            firstName = request.firstName,
-            lastName = request.lastName,
-            status = request.status,
-            modifiedTimestamp = request.modifiedTimestamp,
-            modifiedBy = request.modifiedBy,
-            userEmails = mutableListOf(),
-          ),
-        )
+        mergeRequestIntoUser(it, request)
       }
       .orElseGet {
         val newUser = User(
@@ -62,16 +52,7 @@ class SyncService(
           val existingUser = usersRepository.findByLegacyStaffIdForUpdate(legacyStaffId)
             .orElseThrow()
 
-          usersRepository.saveAndFlush(
-            existingUser.copy(
-              firstName = request.firstName,
-              lastName = request.lastName,
-              status = request.status,
-              modifiedTimestamp = request.modifiedTimestamp,
-              modifiedBy = request.modifiedBy,
-              userEmails = mutableListOf(),
-            ),
-          )
+          mergeRequestIntoUser(existingUser, request)
         }
       }
 
@@ -194,4 +175,15 @@ class SyncService(
       }
     }
   }
+
+  private fun mergeRequestIntoUser(user: User, request: PrisonUserSyncRequest): User = usersRepository.saveAndFlush(
+    user.copy(
+      firstName = request.firstName,
+      lastName = request.lastName,
+      status = request.status,
+      modifiedTimestamp = request.modifiedTimestamp,
+      modifiedBy = request.modifiedBy,
+      userEmails = mutableListOf(),
+    ),
+  )
 }
