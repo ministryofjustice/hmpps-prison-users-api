@@ -9,6 +9,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import java.time.LocalDateTime
@@ -98,6 +101,9 @@ abstract class UserAccountBuilder<T>(
   internal var prisonCodes: List<String>,
 ) {
 
+  private var roleCodes: List<String> = emptyList()
+  private var primaryEmail: String? = null
+
   fun save(): UserAccount {
     userAccountRepository.saveAndFlush(userAccount)
     return userAccount
@@ -107,9 +113,50 @@ abstract class UserAccountBuilder<T>(
 
   fun buildAndSave(): UserAccount {
     build()
+
+    primaryEmail?.let {
+      userAccount.user.addUserEmail(
+        UserEmail(
+          email = it,
+          isPrimary = true,
+          createdBy = "TEST",
+          createdTimestamp = LocalDateTime.now(),
+          user = userAccount.user,
+        ),
+      )
+    }
+
+    userAccount.userRoleCodes.addAll(
+      roleCodes.map {
+        UserRole(
+          id = UserRoleId(username = userAccount.username, roleCode = it),
+          userAccount = userAccount,
+          createdBy = "TEST",
+          createdTimestamp = LocalDateTime.now(),
+        )
+      },
+    )
+
     userRepository.saveAndFlush(userAccount.user)
     userAccountRepository.saveAndFlush(userAccount)
     return userAccount
+  }
+
+  fun withRoleCodes(roleCodes: List<String>): UserAccountBuilder<T> {
+    this.roleCodes = roleCodes
+    return this
+  }
+
+  fun withRoleCodes(vararg roleCodes: String): UserAccountBuilder<T> = withRoleCodes(roleCodes.toList())
+
+  fun withPrimaryEmail(primaryEmail: String): UserAccountBuilder<T> {
+    this.primaryEmail = primaryEmail
+    return this
+  }
+
+  fun withLastLogonDate(lastLogonDate: LocalDateTime): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(lastLoggedIn = lastLogonDate)
+    return this
   }
 
   fun username(username: String): UserAccountBuilder<T> {

@@ -45,7 +45,28 @@ import java.time.LocalDateTime
     NamedAttributeNode("username"),
     NamedAttributeNode("accountStatus"),
     NamedAttributeNode("activeCaseload"),
+    NamedAttributeNode("user", subgraph = "UserAccount.user"),
+  ],
+  subgraphs = [
+    NamedSubgraph(
+      name = "UserAccount.user",
+      attributeNodes = [
+        NamedAttributeNode("legacyStaffId"),
+        NamedAttributeNode("firstName"),
+        NamedAttributeNode("lastName"),
+        NamedAttributeNode(value = "userEmails"),
+      ],
+    ),
+  ],
+)
+@NamedEntityGraph(
+  name = "UserAccount.withUserActiveCaseloadUserRoleCodes",
+  attributeNodes = [
+    NamedAttributeNode("username"),
+    NamedAttributeNode("accountStatus"),
+    NamedAttributeNode("activeCaseload"),
     NamedAttributeNode("user"),
+    NamedAttributeNode("userRoleCodes"),
   ],
 )
 data class UserAccount(
@@ -71,6 +92,9 @@ data class UserAccount(
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
 
+  @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
+  val userRoleCodes: MutableList<UserRole> = mutableListOf(),
+
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
 
@@ -80,8 +104,18 @@ data class UserAccount(
   val modifiedBy: String? = null,
 ) {
 
-  private fun isLocked(): Boolean = AccountStatus.entries.filter { it.isLocked }.contains(accountStatus)
-  fun isEnabled(): Boolean = !isLocked()
+  fun isLocked(): Boolean = accountStatus.isLocked
+  fun isAccountNonLocked(): Boolean = !isLocked()
+  fun isEnabled(): Boolean = isAccountNonLocked()
+  fun isAdmin(): Boolean = accountType == UsageType.ADMIN
+
+  fun isCredentialsNonExpired(): Boolean = accountStatus !in setOf(
+    AccountStatus.EXPIRED,
+    AccountStatus.EXPIRED_LOCKED,
+    AccountStatus.EXPIRED_LOCKED_TIMED,
+  )
+
+  fun isActive(): Boolean = accountStatus in AccountStatus.activeStatuses()
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

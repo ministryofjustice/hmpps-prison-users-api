@@ -46,6 +46,8 @@ data class User(
     userEmails.add(userEmail)
   }
 
+  fun primaryEmail() = userEmails.find { it.isPrimary }?.email
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false

@@ -226,7 +226,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
 
     @Test
     fun activeCaseloadNotFoundAndNoUserAccessibleCaseloads() {
-      assertTrue(userAccountRepository.findByUsername("testy").isEmpty)
+      assertTrue(userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy").isEmpty)
 
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
@@ -246,7 +246,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("userMessage")
         .isEqualTo("Caseload not found: Active caseload NOT_A_CASELOAD not found for user testy")
 
-      val optionalUserAccount = userAccountRepository.findByUsername("testy")
+      val optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
       assertFalse(optionalUserAccount.isPresent)
     }
 
@@ -267,7 +267,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      val optionalUserAccount = userAccountRepository.findByUsername("testy")
+      val optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
       assertTrue(optionalUserAccount.isPresent)
       assertNotNull(optionalUserAccount.get().activeCaseload)
       assertTrue { optionalUserAccount.get().activeCaseload?.id == "MDI" }
@@ -293,10 +293,10 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("userMessage")
         .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
 
-      var optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      var optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
       assertFalse(optionalUserAccount.isPresent)
 
-      optionalUserAccount = userAccountRepository.findByUsername("testy-2")
+      optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-2")
       assertFalse(optionalUserAccount.isPresent)
     }
 
@@ -320,10 +320,10 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("userMessage")
         .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
 
-      var optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      var optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
       assertFalse(optionalUserAccount.isPresent)
 
-      optionalUserAccount = userAccountRepository.findByUsername("testy-2")
+      optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-2")
       assertFalse(optionalUserAccount.isPresent)
     }
 
@@ -344,7 +344,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      val optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      val optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
       assertTrue(optionalUserAccount.isPresent)
       assertNull(optionalUserAccount.get().activeCaseload)
     }
@@ -387,7 +387,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      val optionalUserAccount = userAccountRepository.findByUsername("testy-1")
+      val optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
       assertTrue(optionalUserAccount.isPresent)
       assertNull(optionalUserAccount.get().activeCaseload)
     }
@@ -532,8 +532,8 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("$.userId").isNotEmpty
         .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
-      val testy11UserAccount = userAccountRepository.findByUsername("testy")
-      val testy12UserAccount = userAccountRepository.findByUsername("testy-1")
+      val testy11UserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
+      val testy12UserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
 
       assertTrue(testy11UserAccount.isPresent)
       assertTrue(testy12UserAccount.isPresent)

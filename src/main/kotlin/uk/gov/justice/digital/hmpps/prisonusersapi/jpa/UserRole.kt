@@ -4,6 +4,9 @@ import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.MapsId
 import jakarta.persistence.Table
 import java.io.Serializable
 
@@ -12,6 +15,12 @@ import java.io.Serializable
 data class UserRole(
   @EmbeddedId
   val id: UserRoleId,
+
+  @ManyToOne
+  @MapsId("username")
+  @JoinColumn(name = "username")
+  val userAccount: UserAccount,
+
   val createdBy: String,
   val createdTimestamp: java.time.LocalDateTime,
 )

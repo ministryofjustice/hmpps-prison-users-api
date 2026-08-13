@@ -13,6 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import java.time.LocalDateTime
 
 class UserResourceIntTest : IntegrationTestBase() {
   @Autowired
@@ -207,6 +208,117 @@ class UserResourceIntTest : IntegrationTestBase() {
         .jsonPath("['$username'].enabled").isEqualTo("true")
         .jsonPath("['$username'].activeCaseloadId").isEqualTo("WWI")
         .jsonPath("['$username'].staffId").exists()
+    }
+  }
+
+  @DisplayName("GET /users/{username}")
+  @Nested
+  inner class GetUserByUsername {
+    private val expectedLastLogonDate = LocalDateTime.of(2026, 7, 1, 9, 10, 11)
+
+    @BeforeEach
+    internal fun createUsers() {
+      with(dataBuilder) {
+        generalUser()
+          .username("marco.rossi")
+          .firstName("Marco")
+          .lastName("Rossi")
+          .withRoleCodes("DPS_USER", "DPS_ADMIN")
+          .withPrimaryEmail("marco.rossi@justice.gov.uk")
+          .withLastLogonDate(expectedLastLogonDate)
+          .buildAndSave()
+      }
+    }
+
+    @AfterEach
+    internal fun deleteUsers() = dataBuilder.deleteAll()
+
+    @Test
+    fun `access forbidden when no authority`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .exchange()
+        .expectStatus().isUnauthorized
+    }
+
+    @Test
+    fun `access forbidden when no role`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf()))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `get user forbidden with wrong role`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `get user not found`() {
+      webTestClient.get().uri("/users/dummy")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+        .exchange()
+        .expectStatus().isNotFound
+    }
+
+    @Test
+    fun `get user with role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("username").isEqualTo("marco.rossi")
+        .jsonPath("staffId").isEqualTo(123456)
+        .jsonPath("firstName").isEqualTo("Marco")
+        .jsonPath("lastName").isEqualTo("Rossi")
+        .jsonPath("activeCaseloadId").isEqualTo("WWI")
+        .jsonPath("accountStatus").isEqualTo("OPEN")
+        .jsonPath("accountType").isEqualTo("GENERAL")
+        .jsonPath("dpsRoleCodes.length()").isEqualTo(2)
+        .jsonPath("dpsRoleCodes[?(@ == 'DPS_USER')]").exists()
+        .jsonPath("dpsRoleCodes[?(@ == 'DPS_ADMIN')]").exists()
+        .jsonPath("accountNonLocked").isEqualTo(true)
+        .jsonPath("credentialsNonExpired").isEqualTo(true)
+        .jsonPath("enabled").isEqualTo(true)
+        .jsonPath("admin").isEqualTo(false)
+        .jsonPath("active").isEqualTo(true)
+        .jsonPath("staffStatus").isEqualTo("ACTIVE")
+        .jsonPath("primaryEmail").isEqualTo("marco.rossi@justice.gov.uk")
+        .jsonPath("lastLogonDate").isEqualTo("2026-07-01T09:10:11")
+    }
+
+    @Test
+    fun `get user with role ROLE_MAINTAIN_ACCESS_ROLES`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
+    }
+
+    @Test
+    fun `get user with role ROLE_MANAGE_NOMIS_USER_ACCOUNT`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
+    }
+
+    @Test
+    fun `get user with role ROLE_VIEW_NOMIS_STAFF_DETAILS`() {
+      webTestClient.get().uri("/users/marco.rossi")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_NOMIS_STAFF_DETAILS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("staffId").exists()
     }
   }
 }

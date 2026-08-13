@@ -5,9 +5,11 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserDetail
 import java.util.function.Supplier
 
 @Service
@@ -21,17 +23,24 @@ class UserService(
     .toUserCaseloadDetail(removeDpsCaseload = true)
 
   @Transactional(readOnly = true)
-  fun findUserBasicDetails(username: String) = userAccountRepository.findByUsername(username).orElseThrow(UserNotFoundException("User not found: $username not found")).toUserBasicDetails()
+  fun findUserBasicDetails(username: String) = userAccountRepository.findWithUserAndActiveCaseloadByUsername(username).orElseThrow(UserNotFoundException("User not found: $username not found")).toUserBasicDetails()
 
   @Transactional(readOnly = true)
   fun findUserBasicDetails(usernames: List<String>): Map<String, UserBasicDetails> {
     if (usernames.isEmpty()) return emptyMap()
     log.info("Fetching user basic details for {} usernames", usernames.size)
-    val userDetails = userAccountRepository.findByUsernameIn(usernames)
+    val userDetails = userAccountRepository.findWithUserAndActiveCaseloadByUsernameIn(usernames)
       .map { it.toUserBasicDetails() }
       .associateBy { it.username }
     log.info("Returning {} user basic details for {} usernames", userDetails.size, usernames.size)
     return userDetails
+  }
+
+  @Transactional(readOnly = true)
+  fun findByUsername(username: String): UserDetail {
+    val userAccount = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+    return userAccount.toUserDetail()
   }
 
   companion object {
