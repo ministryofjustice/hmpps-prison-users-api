@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
 import org.springframework.data.repository.findByIdOrNull
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
@@ -27,19 +28,22 @@ class SyncService(
 
   @Transactional
   fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest) {
-    val user = usersRepository.findByLegacyStaffId(legacyStaffId)
+    val updatedUser = usersRepository.findByLegacyStaffIdForUpdate(legacyStaffId)
       .map {
-        it.copy(
-          firstName = request.firstName,
-          lastName = request.lastName,
-          status = request.status,
-          modifiedTimestamp = request.modifiedTimestamp,
-          modifiedBy = request.modifiedBy,
-          userEmails = mutableListOf(),
+        // Pass an empty userEmails list so orphanRemoval deletes previous rows before re-insert.
+        usersRepository.saveAndFlush(
+          it.copy(
+            firstName = request.firstName,
+            lastName = request.lastName,
+            status = request.status,
+            modifiedTimestamp = request.modifiedTimestamp,
+            modifiedBy = request.modifiedBy,
+            userEmails = mutableListOf(),
+          ),
         )
       }
       .orElseGet {
-        User(
+        val newUser = User(
           firstName = request.firstName,
           lastName = request.lastName,
           status = request.status,
@@ -50,11 +54,26 @@ class SyncService(
           modifiedBy = request.modifiedBy,
           userEmails = mutableListOf(),
         )
-      }
 
-    // Update or create the User scalar fields. Pass an empty userEmails list so JPA
-    // orphanRemoval automatically deletes the old emails during the merge/flush.
-    val updatedUser = usersRepository.saveAndFlush(user)
+        try {
+          usersRepository.saveAndFlush(newUser)
+        } catch (_: DataIntegrityViolationException) {
+          // Another concurrent sync created the row first; reload with lock and apply update semantics.
+          val existingUser = usersRepository.findByLegacyStaffIdForUpdate(legacyStaffId)
+            .orElseThrow()
+
+          usersRepository.saveAndFlush(
+            existingUser.copy(
+              firstName = request.firstName,
+              lastName = request.lastName,
+              status = request.status,
+              modifiedTimestamp = request.modifiedTimestamp,
+              modifiedBy = request.modifiedBy,
+              userEmails = mutableListOf(),
+            ),
+          )
+        }
+      }
 
     // Insert new emails directly into the managed collection so JPA handles the INSERT via cascade.
     val primaryEmail = primaryEmailDetector.getPrimaryEmail(request.emails)
