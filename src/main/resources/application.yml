@@ -79,3 +79,9 @@ springdoc:
   swagger-ui:
     enabled: false
     version: 5.32.2
+
+sync:
+  lock:
+    retry-backoff-ms: 50
+    max-wait-ms: 5000
+
