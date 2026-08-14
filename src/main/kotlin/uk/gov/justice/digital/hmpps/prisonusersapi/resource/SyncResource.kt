@@ -56,6 +56,11 @@ class SyncResource(
         description = "Caseload not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun putPrisonUserForSync(

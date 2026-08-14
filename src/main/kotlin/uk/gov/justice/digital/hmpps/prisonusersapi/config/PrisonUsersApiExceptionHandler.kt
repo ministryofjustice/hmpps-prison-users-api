@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.ActiveCaseloadNotInUserAccessibleCaseloadsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.CaseloadNotFoundException
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncLockAcquisitionTimeoutException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloadsWithoutUserAccountException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccountAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
@@ -174,6 +175,20 @@ class PrisonUsersApiExceptionHandler {
         ErrorResponse(
           status = CONFLICT,
           userMessage = "Conflict: Data integrity violation",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(SyncLockAcquisitionTimeoutException::class)
+  fun handleSyncLockAcquisitionTimeoutException(e: SyncLockAcquisitionTimeoutException): ResponseEntity<ErrorResponse> {
+    log.debug("Sync lock acquisition timed out: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          userMessage = "Conflict: Unable to acquire sync lock",
           developerMessage = e.message,
         ),
       )
