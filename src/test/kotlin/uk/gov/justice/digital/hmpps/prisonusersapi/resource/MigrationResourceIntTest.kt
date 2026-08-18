@@ -148,7 +148,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isBadRequest
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("Validation failure: Active caseload LEI not found for user testy")
+        .isEqualTo("Validation failure: Active caseload LEI not found in user accessible caseloads for user testy")
     }
 
     @Test
@@ -367,7 +367,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .expectStatus().isBadRequest
         .expectBody()
         .jsonPath("userMessage")
-        .isEqualTo("Validation failure: Active caseload LEI not found for user testy-1")
+        .isEqualTo("Validation failure: Active caseload LEI not found in user accessible caseloads for user testy-1")
     }
 
     @Test

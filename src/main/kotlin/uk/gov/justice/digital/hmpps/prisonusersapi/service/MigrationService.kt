@@ -46,11 +46,10 @@ class MigrationService(
         if (activeCaseloadId == null) return@toActiveCaseloadMapper null
         if (caseloadRepository.findByIdOrNull(activeCaseloadId) == null) throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user $username")
 
-        val activeCaseload: Caseload = allCaseloadsById?.get(activeCaseloadId)
-          ?: throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found for user $username")
+        val activeCaseload: Caseload? = allCaseloadsById?.get(activeCaseloadId)
 
         val migratedUserAccessibleCaseloadsForUsername = migratedAccessibleCaseloadsByUsername?.get(username)
-        if (migratedUserAccessibleCaseloadsForUsername.isNullOrEmpty()) {
+        if (activeCaseload == null || migratedUserAccessibleCaseloadsForUsername.isNullOrEmpty()) {
           throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found in user accessible caseloads for user $username")
         }
 
