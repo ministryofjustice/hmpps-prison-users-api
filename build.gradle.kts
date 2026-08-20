@@ -1,5 +1,5 @@
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.1"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.5"
   kotlin("plugin.spring") version "2.4.10"
   kotlin("plugin.jpa") version "2.4.10"
 }
@@ -14,9 +14,8 @@ dependencies {
   // Temporarily pin spring doc at 3.0.2 whilst waiting for 3.0.4 upgrade
   val springDocVersion = "3.0.2"
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springDocVersion")
-
   constraints {
-    implementation("org.webjars:swagger-ui:5.32.2")
+    implementation("org.webjars:swagger-ui:5.32.11")
   }
   implementation("org.springframework.boot:spring-boot-starter-flyway")
   implementation("org.flywaydb:flyway-core")
