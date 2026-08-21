@@ -9,15 +9,18 @@
 - `UserAccount` is the main lookup root for read APIs; it links to `User`, `activeCaseload`, and `userAccessibleCaseloads` (`jpa/UserAccount.kt`).
 - Read endpoints currently expose:
   - `GET /users/basic/{username}` in `resource/UserResource.kt`
+  - `POST /users/basic/find-by-usernames` in `resource/UserResource.kt`
+  - `GET /users/{username}` in `resource/UserResource.kt`
   - `GET /users/{username}/caseloads` in `resource/UserCaseloadManagementResource.kt`
+  - `GET /reference-data/caseloads` in `resource/ReferenceDataResource.kt`
   - `GET /reconciliation/user/{legacyStaffId}` in `resource/ReconciliationResource.kt` (fully wired to `service/ReconciliationService.kt` and repositories)
 - Migration writes are handled in one transaction in `service/MigrationService.kt`: create `User`, validate caseloads, save `UserAccount`s, then save roles and accessible caseload join rows.
-- `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` is currently a controller-level stub (no service/repository wiring yet).
+- `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` is fully wired to `service/SyncService.kt` (transactional upsert + replace semantics for emails/accounts/roles/caseloads, with DB-backed per-user sync locking).
 - Response DTOs for reconciliation and sync are in `data/reconciliation/` (e.g. `PrisonUserReconciliationResponse.kt`) and `data/sync/` (e.g. `PrisonUserSyncRequest.kt`), with converters like `User.toPrisonUserReconciliationResponse()` in `service/converters/FromUser.kt`.
-- Schema lives in Flyway SQL under `src/main/resources/db/prison-users/`; `V1_0__create_tables.sql` is the quickest way to understand table ownership/cascade rules.
+- Schema lives in Flyway SQL under `src/main/resources/db/prison-users/` (base migrations) and `src/main/resources/db/prison-users_postgresql/` (PostgreSQL-specific migrations, e.g. partial indexes).
 
 ## Local run / build / test
-- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.1. `hmpps-kotlin-spring-boot-starter` is 3.0.0, with `hmpps-kotlin-spring-boot-starter-test` still at 3.0.0-beta2.
+- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.5. `hmpps-kotlin-spring-boot-starter` is 3.0.0, with `hmpps-kotlin-spring-boot-starter-test` still at 3.0.0-beta2.
 - Build the jar: `./gradlew clean assemble`
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
 - Run only auth, then start the app from IntelliJ with profile `dev`: `docker compose pull && docker compose up --scale hmpps-prison-users-api=0`
@@ -25,7 +28,7 @@
 - Run tests with `./gradlew test`; integration tests use `@SpringBootTest` + `WebTestClient`, not MockMvc.
 
 ## Project-specific conventions
-- Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it.
+- Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it (except allowlisted endpoints such as `GET /reference-data/caseloads` and Swagger/error paths).
 - OpenAPI annotations are kept directly on controller methods and DTOs (`resource/*.kt`, `data/UserMigrationRequest.kt`). Swagger/OpenAPI is enabled in `dev` and `test`, disabled in base `application.yml`.
 - Error responses are centralized in `config/PrisonUsersApiExceptionHandler.kt`; prefer throwing the named service exceptions already used there rather than returning ad hoc `ResponseEntity` errors.
 - Mapping logic belongs in `service/converters/`, not controllers. Example: `FromUserAccount.kt` title-cases names and strips DPS caseloads when `removeDpsCaseload = true`. For endpoints returning detailed response objects (e.g., `PrisonUserReconciliationResponse`), converters are extension functions on domain entities (e.g., `User.toPrisonUserReconciliationResponse()` in `FromUser.kt`).
@@ -33,6 +36,7 @@
 - JPA entity graphs control loading and are declared as `@NamedEntityGraph` annotations (`jpa/UserAccount.kt`). Multiple graphs exist for different access patterns:
   - `UserAccount.withCaseloads`: used by `UserAccountRepository.findAllByUserUserId()` for full caseload details
   - `UserAccount.withUserAndActiveCaseload`: used by `UserAccountRepository.findByUsername()` for quick user lookups
+  - `UserAccount.withUserActiveCaseloadUserRoleCodes`: used by `UserAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername()` for user details with role codes
   - `UserAccount.caseloads` (default): used by `UserAccountRepository.findById()`
   Preserve or update the graph when adding fields that must be eagerly available to converters.
 - Tests build data through `integration/helper/EntityDataLoader.kt` (`DataBuilder`) and authenticate with `JwtAuthorisationHelper` via `IntegrationTestBase.setAuthorisation()`.
@@ -42,7 +46,8 @@
 - Auth is HMPPS Auth as an OAuth2 resource server; JWT keys come from `${hmpps-auth.url}/.well-known/jwks.json` (`src/main/resources/application.yml`).
 - `dev` uses in-memory H2 with Flyway (`application-dev.yml`); deployed environments use PostgreSQL with datasource values injected from Kubernetes secrets (`helm_deploy/hmpps-prison-users-api/values.yaml`).
 - `application.yml` enables graceful shutdown and health probes; Spring Boot management endpoints are exposed at `/`, with `/health` and `/info` available for readiness/liveness and diagnostics.
-- `build.gradle.kts` temporarily pins `springdoc-openapi-starter-webmvc-ui` to 3.0.2 and constrains `org.webjars:swagger-ui` to 5.32.2; keep those in sync when changing OpenAPI tooling.
+- Sync lock timing is configurable via `sync.lock.retry-backoff-ms` and `sync.lock.max-wait-ms` in `application.yml` and is used by `service/SyncService.kt`.
+- `build.gradle.kts` temporarily pins `springdoc-openapi-starter-webmvc-ui` to 3.0.2 and constrains `org.webjars:swagger-ui` to 5.32.11; keep those in sync when changing OpenAPI tooling.
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
 - For broader HMPPS Kotlin conventions, see the "Common Kotlin patterns" section in `README.md` and the linked tech docs; the project is community managed via `#kotlin-dev`.
 - If you add endpoints, remember there are tests asserting security coverage and OpenAPI availability/validity (`integration/ResourceSecurityTest.kt`, `integration/OpenApiDocsTest.kt`).
