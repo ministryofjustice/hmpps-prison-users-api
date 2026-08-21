@@ -152,76 +152,121 @@ class MigrationResourceIntTest : IntegrationTestBase() {
     }
 
     @Test
-    fun userAlreadyExists() {
-      val userMigrationRequest = UserMigrationRequest(
-        user = migratedUser(),
-        accounts = listOf(userAccount(username = "testy")),
-        roles = null,
-        accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
+    fun updatesExistingUserAndReplacesAssociatedData() {
+      val initialRequest = UserMigrationRequest(
+        user = migratedUser(
+          firstName = "Original",
+          lastName = "Person",
+          emails = listOf(migratedUserEmail("original.user@example.com", 1), migratedUserEmail("original.user@justice.gov.uk", 2)),
+        ),
+        accounts = listOf(
+          userAccount(username = "testy", activeCaseloadId = "LEI"),
+          userAccount(username = "testy-1", activeCaseloadId = "MDI"),
+        ),
+        roles = listOf(
+          userRole(username = "testy", roleCode = "ROLE_OLD_ONE"),
+          userRole(username = "testy-1", roleCode = "ROLE_OLD_TWO"),
+        ),
+        accessibleCaseloads = listOf(
+          accessibleCaseload(username = "testy", caseloadId = "LEI"),
+          accessibleCaseload(username = "testy", caseloadId = "MDI"),
+          accessibleCaseload(username = "testy-1", caseloadId = "MDI"),
+        ),
+      )
+
+      val updatedRequest = UserMigrationRequest(
+        user = migratedUser(
+          firstName = "Updated",
+          lastName = "Person",
+          status = UserStatus.INACTIVE,
+          emails = listOf(migratedUserEmail("updated.user@example.com", 1), migratedUserEmail("updated.user@justice.gov.uk", 2)),
+        ),
+        accounts = listOf(
+          userAccount(username = "testy", activeCaseloadId = "MDI"),
+          userAccount(username = "testy-1", activeCaseloadId = "LEI"),
+        ),
+        roles = listOf(
+          userRole(username = "testy", roleCode = "ROLE_NEW_ONE"),
+          userRole(username = "testy-1", roleCode = "ROLE_NEW_TWO"),
+        ),
+        accessibleCaseloads = listOf(
+          accessibleCaseload(username = "testy", caseloadId = "MDI"),
+          accessibleCaseload(username = "testy-1", caseloadId = "LEI"),
+          accessibleCaseload(username = "testy-1", caseloadId = "MDI"),
+        ),
       )
 
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            userMigrationRequest,
-          ),
-        )
+        .body(BodyInserters.fromValue(initialRequest))
         .exchange()
         .expectStatus().isOk
 
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            userMigrationRequest,
-          ),
-        )
+        .body(BodyInserters.fromValue(updatedRequest))
         .exchange()
-        .expectStatus().isEqualTo(HttpStatus.SC_CONFLICT)
-        .expectBody()
-        .jsonPath("userMessage")
-        .isEqualTo("User already exists: User with legacy staff id ${userMigrationRequest.user.staffId} already exists")
+        .expectStatus().isOk
+
+      val migratedUserEntity = userRepository.findByLegacyStaffId(updatedRequest.user.staffId).orElseThrow()
+      assertTrue(migratedUserEntity.firstName == "Updated")
+      assertTrue(migratedUserEntity.lastName == "Person")
+      assertTrue(migratedUserEntity.status == UserStatus.INACTIVE)
+
+      val emails = userEmailsRepository.findAll().filter { it.user.userId == migratedUserEntity.userId }
+      assertTrue(emails.size == 2)
+      assertTrue(emails.map { it.email }.containsAll(listOf("updated.user@example.com", "updated.user@justice.gov.uk")))
+      assertFalse(emails.map { it.email }.contains("original.user@example.com"))
+
+      val accounts = userAccountRepository.findAllByUserUserId(migratedUserEntity.userId!!)
+      assertTrue(accounts.size == 2)
+      assertTrue(accounts.find { it.username == "testy" }?.activeCaseload?.id == "MDI")
+      assertTrue(accounts.find { it.username == "testy-1" }?.activeCaseload?.id == "LEI")
+
+      val rolesByUsername = userRoleRepository.findAll().groupBy { it.id.username }
+      assertTrue(rolesByUsername["testy"]?.map { it.id.roleCode } == listOf("ROLE_NEW_ONE"))
+      assertTrue(rolesByUsername["testy-1"]?.map { it.id.roleCode } == listOf("ROLE_NEW_TWO"))
+
+      val accessibleCaseloadsByUsername = userAccessibleCaseloadRepository.findAll().groupBy { it.userAccount.username }
+      assertTrue(accessibleCaseloadsByUsername["testy"]?.map { it.caseload.id } == listOf("MDI"))
+      assertTrue(accessibleCaseloadsByUsername["testy-1"]?.map { it.caseload.id }?.containsAll(listOf("LEI", "MDI")) == true)
+      assertTrue(userRepository.findAll().size == 1)
     }
 
     @Test
-    fun duplicateUserAccountUsername() {
+    fun reMigratingSamePayloadDoesNotConflictOrDuplicateData() {
       val userMigrationRequest = UserMigrationRequest(
         user = migratedUser(),
         accounts = listOf(userAccount(username = "testy")),
-        roles = null,
-        accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
-      )
-
-      val userMigrationRequestWithDuplicateAccountUsername = UserMigrationRequest(
-        user = migratedUser(staffId = 1, firstName = "DuplicateAccount", lastName = "Test", emails = listOf(migratedUserEmail("duplicate-test@email.com", 1), migratedUserEmail("duplicate-test2@email.com", 2))),
-        accounts = listOf(userAccount(username = "testy")),
-        roles = null,
+        roles = listOf(userRole(username = "testy", roleCode = "ROLE_BANANAS")),
         accessibleCaseloads = listOf(accessibleCaseload(username = "testy", caseloadId = "LEI"), accessibleCaseload(username = "testy", caseloadId = "MDI")),
       )
 
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            userMigrationRequest,
-          ),
-        )
+        .body(BodyInserters.fromValue(userMigrationRequest))
         .exchange()
         .expectStatus().isOk
 
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
-        .body(
-          BodyInserters.fromValue(
-            userMigrationRequestWithDuplicateAccountUsername,
-          ),
-        )
+        .body(BodyInserters.fromValue(userMigrationRequest))
         .exchange()
-        .expectStatus().isEqualTo(HttpStatus.SC_CONFLICT)
-        .expectBody()
-        .jsonPath("userMessage")
-        .isEqualTo("User account already exists: User account with username testy already exists")
+        .expectStatus().isOk
+
+      val migratedUserEntity = userRepository.findByLegacyStaffId(userMigrationRequest.user.staffId).orElseThrow()
+      assertTrue(userRepository.findAll().size == 1)
+
+      val accounts = userAccountRepository.findAllByUserUserId(migratedUserEntity.userId!!)
+      assertTrue(accounts.size == 1)
+      assertTrue(accounts[0].username == "testy")
+
+      val rolesByUsername = userRoleRepository.findAll().groupBy { it.id.username }
+      assertTrue(rolesByUsername["testy"]?.map { it.id.roleCode } == listOf("ROLE_BANANAS"))
+
+      val accessibleCaseloadsByUsername = userAccessibleCaseloadRepository.findAll().groupBy { it.userAccount.username }
+      assertTrue(accessibleCaseloadsByUsername["testy"]?.map { it.caseload.id }?.containsAll(listOf("LEI", "MDI")) == true)
+      assertTrue(userEmailsRepository.findAll().size == 2)
     }
 
     @Test
@@ -762,12 +807,13 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       staffId: Long = Long.MAX_VALUE,
       firstName: String = "Test",
       lastName: String = "User",
+      status: UserStatus = UserStatus.ACTIVE,
     ) = MigratedUser(
       staffId = staffId,
       emails = emails,
       firstName = firstName,
       lastName = lastName,
-      status = UserStatus.ACTIVE,
+      status = status,
       createdTimestamp = LocalDateTime.now(),
       createdBy = "TEST_USER",
     )

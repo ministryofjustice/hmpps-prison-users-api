@@ -20,9 +20,14 @@ fun UserMigrationRequest.toUser(primaryEmailDetector: PrimaryEmailDetector): Use
       modifiedBy = modifiedBy,
     )
 
+    return withEmailsAdded(user, primaryEmailDetector)
+  }
+}
+
+fun UserMigrationRequest.withEmailsAdded(user: User, primaryEmailDetector: PrimaryEmailDetector): User {
+  with(this.user) {
     val emails = this.emails.orEmpty().sortedBy { it.legacyEmailId }
     val primaryEmail: String? = primaryEmailDetector.getPrimaryEmail(emails)
-
     emails.forEach {
       user.addUserEmail(
         UserEmail(
@@ -34,8 +39,23 @@ fun UserMigrationRequest.toUser(primaryEmailDetector: PrimaryEmailDetector): Use
         ),
       )
     }
+  }
 
-    return user
+  return user
+}
+
+fun UserMigrationRequest.copyUserFrom(existingUser: User): User {
+  with(this.user) {
+    return existingUser.copy(
+      firstName = firstName,
+      lastName = lastName,
+      status = status,
+      createdTimestamp = createdTimestamp,
+      createdBy = createdBy,
+      modifiedTimestamp = modifiedTimestamp,
+      modifiedBy = modifiedBy,
+      userEmails = mutableListOf(),
+    )
   }
 }
 

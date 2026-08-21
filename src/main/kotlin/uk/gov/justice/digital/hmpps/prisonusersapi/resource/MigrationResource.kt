@@ -27,7 +27,7 @@ class MigrationResource(
   @PostMapping("/user")
   @Operation(
     summary = "Migrate a single user from NOMIS into Prison Users API, including associated accounts, role and caseload link data",
-    description = "Creates a user. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
+    description = "Creates or updates a user. Requires role ROLE_PRISON_USERS_API__MIGRATION__RW",
     security = [SecurityRequirement(name = "PRISON_USERS_API__MIGRATION__RW")],
     requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
       content = [
@@ -40,7 +40,7 @@ class MigrationResource(
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "User created with associated accounts, role and caseload links from NOMIS",
+        description = "User created or updated with associated accounts, role and caseload links from NOMIS",
       ),
       ApiResponse(
         responseCode = "400",
@@ -49,7 +49,7 @@ class MigrationResource(
       ),
       ApiResponse(
         responseCode = "409",
-        description = "Conflict (eg. duplicate user or username)",
+        description = "Conflict (eg. data integrity violation)",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
       ApiResponse(

@@ -16,8 +16,10 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessible
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.copyUserFrom
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccounts
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.withEmailsAdded
 
 @Service
 class MigrationService(
@@ -31,11 +33,24 @@ class MigrationService(
 
   @Transactional
   fun migrateUser(userMigrationRequest: UserMigrationRequest): UserMigrationResponse {
-    if (usersRepository.existsUsersByLegacyStaffId(userMigrationRequest.user.staffId)) {
-      throw UserAlreadyExistsException("User with legacy staff id ${userMigrationRequest.user.staffId} already exists")
-    }
+    val user = usersRepository.findByLegacyStaffId(userMigrationRequest.user.staffId)
+      .map { existingUser ->
+        usersRepository.saveAndFlush(
+          userMigrationRequest.copyUserFrom(existingUser),
+        ).also { updatedUser ->
+          usersRepository.saveAndFlush(userMigrationRequest.withEmailsAdded(updatedUser, primaryEmailDetector))
+        }
+      }
+      .orElseGet {
+        usersRepository.saveAndFlush(userMigrationRequest.toUser(primaryEmailDetector))
+      }
 
-    val user = usersRepository.saveAndFlush(userMigrationRequest.toUser(primaryEmailDetector))
+    val existingUserAccounts = user.userId?.let { userAccountRepository.findAllByUserUserId(it) }.orEmpty()
+    if (existingUserAccounts.isNotEmpty()) {
+      userRoleRepository.deleteAllByIdUsernameIn(existingUserAccounts.map { it.username })
+      userAccountRepository.deleteAll(existingUserAccounts)
+      userAccountRepository.flush()
+    }
 
     val allCaseloadsById = loadAllUserAccessibleCaseloadsMappedByCaseloadId(userMigrationRequest)
     val migratedAccessibleCaseloadsByUsername = userMigrationRequest.accessibleCaseloads?.groupBy { it.username }
@@ -61,72 +76,71 @@ class MigrationService(
         activeCaseload
       }
 
-    userMigrationRequest.accounts?.let {
-      var userAccounts = userMigrationRequest.toUserAccounts(
-        user,
-        toActiveCaseloadMapper,
-      )!!
-
-      userAccounts.forEach { userAccount ->
-        if (userAccountRepository.existsByUsername(userAccount.username)) throw UserAccountAlreadyExistsException("User account with username ${userAccount.username} already exists")
+    val userAccounts = userMigrationRequest.accounts.orEmpty().let {
+      if (it.isEmpty()) {
+        emptyList()
+      } else {
+        userMigrationRequest.toUserAccounts(user, toActiveCaseloadMapper).orEmpty()
       }
+    }
 
-      userAccounts = userAccountRepository.saveAllAndFlush<UserAccount>(userAccounts)
+    if (userAccounts.isNotEmpty()) {
+      userAccountRepository.saveAllAndFlush<UserAccount>(userAccounts)
+    }
 
-      userMigrationRequest.roles?.let {
-        val userRoles = mutableListOf<UserRole>()
-        val migratedRolesByUsername = userMigrationRequest.roles.groupBy { it.username }
-        migratedRolesByUsername.entries.forEach { migratedRolesForUser ->
-          val userAccount = userAccounts.find { it.username == migratedRolesForUser.key }
-          if (userAccount == null) {
-            throw UserRoleWithoutUserAccountException("User account for username ${migratedRolesForUser.key} not found during user role migration")
-          }
-
-          migratedRolesForUser.value.forEach { migratedUserRole ->
-            UserRoleId(userAccount.username, migratedUserRole.roleCode).let {
-              userRoles.add(
-                UserRole(
-                  it,
-                  userAccount,
-                  migratedUserRole.createdBy,
-                  migratedUserRole.createdTimestamp,
-                ),
-              )
-            }
-          }
+    userMigrationRequest.roles?.let {
+      val userRoles = mutableListOf<UserRole>()
+      val migratedRolesByUsername = userMigrationRequest.roles.groupBy { it.username }
+      migratedRolesByUsername.entries.forEach { migratedRolesForUser ->
+        val userAccount = userAccounts.find { it.username == migratedRolesForUser.key }
+        if (userAccount == null) {
+          throw UserRoleWithoutUserAccountException("User account for username ${migratedRolesForUser.key} not found during user role migration")
         }
 
-        userRoleRepository.saveAll(userRoles)
-      }
-
-      userMigrationRequest.accessibleCaseloads?.let {
-        val userAccessibleCaseloads = mutableListOf<UserAccessibleCaseload>()
-
-        migratedAccessibleCaseloadsByUsername?.entries?.forEach { migratedAccessibleCaseloadsForUser ->
-          val userAccount = userAccounts.find { it.username == migratedAccessibleCaseloadsForUser.key }
-          if (userAccount == null) {
-            throw UserAccessibleCaseloadsWithoutUserAccountException("User account for username ${migratedAccessibleCaseloadsForUser.key} not found during user accessible caseload migration")
-          }
-
-          migratedAccessibleCaseloadsByUsername[userAccount.username]?.forEach { migratedUserAccessibleCaseload ->
-            val caseload = allCaseloadsById?.get(migratedUserAccessibleCaseload.caseloadId)
-              ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
-
-            UserAccessibleCaseloadId(userAccount.username, caseload.id).let {
-              userAccessibleCaseloads.add(
-                UserAccessibleCaseload(
-                  it,
-                  caseload = caseload,
-                  userAccount = userAccount,
-                  createdBy = migratedUserAccessibleCaseload.createdBy,
-                  createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp,
-                ),
-              )
-            }
+        migratedRolesForUser.value.forEach { migratedUserRole ->
+          UserRoleId(userAccount.username, migratedUserRole.roleCode).let {
+            userRoles.add(
+              UserRole(
+                it,
+                userAccount,
+                migratedUserRole.createdBy,
+                migratedUserRole.createdTimestamp,
+              ),
+            )
           }
         }
-        userAccessibleCaseloadRepository.saveAll(userAccessibleCaseloads)
       }
+
+      userRoleRepository.saveAll(userRoles)
+    }
+
+    userMigrationRequest.accessibleCaseloads?.let {
+      val userAccessibleCaseloads = mutableListOf<UserAccessibleCaseload>()
+
+      migratedAccessibleCaseloadsByUsername?.entries?.forEach { migratedAccessibleCaseloadsForUser ->
+        val userAccount = userAccounts.find { it.username == migratedAccessibleCaseloadsForUser.key }
+        if (userAccount == null) {
+          throw UserAccessibleCaseloadsWithoutUserAccountException("User account for username ${migratedAccessibleCaseloadsForUser.key} not found during user accessible caseload migration")
+        }
+
+        migratedAccessibleCaseloadsByUsername[userAccount.username]?.forEach { migratedUserAccessibleCaseload ->
+          val caseload = allCaseloadsById?.get(migratedUserAccessibleCaseload.caseloadId)
+            ?: throw CaseloadNotFoundException("Caseload ${migratedUserAccessibleCaseload.caseloadId} not found")
+
+          UserAccessibleCaseloadId(userAccount.username, caseload.id).let {
+            userAccessibleCaseloads.add(
+              UserAccessibleCaseload(
+                it,
+                caseload = caseload,
+                userAccount = userAccount,
+                createdBy = migratedUserAccessibleCaseload.createdBy,
+                createdTimestamp = migratedUserAccessibleCaseload.createdTimestamp,
+              ),
+            )
+          }
+        }
+      }
+      userAccessibleCaseloadRepository.saveAll(userAccessibleCaseloads)
     }
     return UserMigrationResponse(user.userId.toString(), user.legacyStaffId)
   }
