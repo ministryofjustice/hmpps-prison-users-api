@@ -9,7 +9,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
@@ -17,8 +16,10 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessible
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.copyUserFrom
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccounts
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.withEmailsAdded
 
 @Service
 class MigrationService(
@@ -35,35 +36,9 @@ class MigrationService(
     val user = usersRepository.findByLegacyStaffId(userMigrationRequest.user.staffId)
       .map { existingUser ->
         usersRepository.saveAndFlush(
-          existingUser.copy(
-            firstName = userMigrationRequest.user.firstName,
-            lastName = userMigrationRequest.user.lastName,
-            status = userMigrationRequest.user.status,
-            createdTimestamp = userMigrationRequest.user.createdTimestamp,
-            createdBy = userMigrationRequest.user.createdBy,
-            modifiedTimestamp = userMigrationRequest.user.modifiedTimestamp,
-            modifiedBy = userMigrationRequest.user.modifiedBy,
-            userEmails = mutableListOf(),
-          ),
+          userMigrationRequest.copyUserFrom(existingUser),
         ).also { updatedUser ->
-          val emails = userMigrationRequest.user.emails.orEmpty().sortedBy { it.legacyEmailId }
-          val primaryEmail = primaryEmailDetector.getPrimaryEmail(emails)
-
-          emails.forEach { migratedEmail ->
-            updatedUser.addUserEmail(
-              UserEmail(
-                email = migratedEmail.email,
-                isPrimary = migratedEmail.email == primaryEmail,
-                createdBy = migratedEmail.createdBy,
-                createdTimestamp = migratedEmail.createdTimestamp,
-                modifiedBy = migratedEmail.modifiedBy,
-                modifiedTimestamp = migratedEmail.modifiedTimestamp,
-                user = updatedUser,
-              ),
-            )
-          }
-
-          usersRepository.saveAndFlush(updatedUser)
+          usersRepository.saveAndFlush(userMigrationRequest.withEmailsAdded(updatedUser, primaryEmailDetector))
         }
       }
       .orElseGet {
