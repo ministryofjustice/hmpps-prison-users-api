@@ -66,6 +66,7 @@ fun UserMigrationRequest.toUserAccounts(user: User, mapToActiveCaseload: (active
     accountType = userAccount.accountType,
     accountStatus = userAccount.accountStatus,
     activeCaseload = mapToActiveCaseload(userAccount.activeCaseloadId, userAccount.username),
+    lastLoggedIn = userAccount.lastLoggedIn,
     createdBy = userAccount.createdBy,
     createdTimestamp = userAccount.createdTimestamp,
     modifiedBy = userAccount.modifiedBy,

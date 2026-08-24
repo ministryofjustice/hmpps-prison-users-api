@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
 import org.apache.http.HttpStatus
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -554,13 +555,16 @@ class MigrationResourceIntTest : IntegrationTestBase() {
 
     @Test
     fun completeRequestAndResponse() {
+      val migratedUserAccountForTesty = userAccount(username = "testy", activeCaseloadId = "MDI")
+      val migratedUserAccountForTesty1 = userAccount(username = "testy-1", activeCaseloadId = "LEI")
+
       webTestClient.post().uri("/migrate/user")
         .headers(setAuthorisation(roles = listOf("ROLE_PRISON_USERS_API__MIGRATION__RW")))
         .body(
           BodyInserters.fromValue(
             UserMigrationRequest(
               user = migratedUser(),
-              accounts = listOf(userAccount(username = "testy", activeCaseloadId = "MDI"), userAccount(username = "testy-1", activeCaseloadId = "LEI")),
+              accounts = listOf(migratedUserAccountForTesty, migratedUserAccountForTesty1),
               roles = listOf(userRole(username = "testy", roleCode = "ROLE_BANANAS"), userRole(username = "testy-1", roleCode = "ROLE_STRAWBERRIES")),
               accessibleCaseloads = listOf(
                 accessibleCaseload(username = "testy", caseloadId = "MDI"),
@@ -577,17 +581,21 @@ class MigrationResourceIntTest : IntegrationTestBase() {
         .jsonPath("$.userId").isNotEmpty
         .jsonPath("$.staffId").isEqualTo(migratedUser().staffId)
 
-      val testy11UserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
-      val testy12UserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
+      val testyUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
+      val testy1UserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
 
-      assertTrue(testy11UserAccount.isPresent)
-      assertTrue(testy12UserAccount.isPresent)
+      assertTrue(testyUserAccount.isPresent)
+      assertTrue(testy1UserAccount.isPresent)
+      assertNotNull(testyUserAccount.get().lastLoggedIn)
+      assertNotNull(testy1UserAccount.get().lastLoggedIn)
+      assertEquals(testyUserAccount.get().lastLoggedIn, migratedUserAccountForTesty.lastLoggedIn)
+      assertEquals(testy1UserAccount.get().lastLoggedIn, migratedUserAccountForTesty1.lastLoggedIn)
 
-      assertNotNull(testy11UserAccount.get().activeCaseload)
-      assertNotNull(testy12UserAccount.get().activeCaseload)
+      assertNotNull(testyUserAccount.get().activeCaseload)
+      assertNotNull(testy1UserAccount.get().activeCaseload)
 
-      assertTrue { testy11UserAccount.get().activeCaseload?.id == "MDI" }
-      assertTrue { testy12UserAccount.get().activeCaseload?.id == "LEI" }
+      assertTrue { testyUserAccount.get().activeCaseload?.id == "MDI" }
+      assertTrue { testy1UserAccount.get().activeCaseload?.id == "LEI" }
 
       val userAccessibleCaseloadsByUsername = userAccessibleCaseloadRepository.findAll().groupBy { it.userAccount.username }
 
@@ -798,6 +806,7 @@ class MigrationResourceIntTest : IntegrationTestBase() {
       accountType = UsageType.GENERAL,
       accountStatus = AccountStatus.OPEN,
       activeCaseloadId = activeCaseloadId,
+      lastLoggedIn = LocalDateTime.of(2022, 1, 1, 1, 1),
       createdTimestamp = LocalDateTime.now(),
       createdBy = "TEST_USER",
     )

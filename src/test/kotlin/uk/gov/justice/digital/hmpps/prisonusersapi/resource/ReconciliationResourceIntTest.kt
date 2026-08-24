@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBa
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class ReconciliationResourceIntTest : IntegrationTestBase() {
 
@@ -120,6 +121,7 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
         .jsonPath("emails[0].isPrimary").isEqualTo(true)
         .jsonPath("accounts.length()").isEqualTo(2)
         .jsonPath("accounts[0].username").isEqualTo("RECON_USER")
+        .jsonPath("accounts[0].lastLoggedIn").isEqualTo(LocalDateTime.of(2022, 1, 1, 1, 1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
         .jsonPath("accounts[0].roles.length()").isEqualTo(2)
         .jsonPath("accounts[0].roles[0].roleCode").isEqualTo("ROLE_ALPHA")
         .jsonPath("accounts[0].roles[1].roleCode").isEqualTo("ROLE_BRAVO")
@@ -137,6 +139,7 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     accountType = UsageType.GENERAL,
     accountStatus = AccountStatus.OPEN,
     activeCaseloadId = activeCaseloadId,
+    lastLoggedIn = LocalDateTime.of(2022, 1, 1, 1, 1),
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
   )
