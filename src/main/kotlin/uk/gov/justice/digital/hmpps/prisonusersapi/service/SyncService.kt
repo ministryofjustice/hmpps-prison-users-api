@@ -12,7 +12,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
@@ -20,6 +19,8 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockReposi
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 
 @Service
 class SyncService(
@@ -90,36 +91,12 @@ class SyncService(
         }
         .orElseGet {
           usersRepository.saveAndFlush(
-            User(
-              firstName = request.firstName,
-              lastName = request.lastName,
-              status = request.status,
-              legacyStaffId = legacyStaffId,
-              createdTimestamp = request.createdTimestamp,
-              createdBy = request.createdBy,
-              modifiedTimestamp = request.modifiedTimestamp,
-              modifiedBy = request.modifiedBy,
-              userEmails = mutableListOf(),
-            ),
+            request.toUser(legacyStaffId),
           )
         }
 
       // Insert new emails directly into the managed collection so JPA handles the INSERT via cascade.
-      val primaryEmail = primaryEmailDetector.getPrimaryEmail(request.emails)
-
-      request.emails.forEach { syncEmail ->
-        updatedUser.addUserEmail(
-          UserEmail(
-            email = syncEmail.email,
-            isPrimary = syncEmail.email == primaryEmail,
-            createdBy = syncEmail.createdBy,
-            createdTimestamp = syncEmail.createdTimestamp,
-            modifiedBy = syncEmail.modifiedBy,
-            modifiedTimestamp = syncEmail.modifiedTimestamp,
-            user = updatedUser,
-          ),
-        )
-      }
+      request.addEmailsTo(updatedUser, primaryEmailDetector)
 
       // Load existing accounts for this user (with caseloads eagerly via withCaseloads graph).
       val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(updatedUser.userId))

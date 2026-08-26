@@ -16,10 +16,10 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessible
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.copyUserFrom
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccounts
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.withEmailsAdded
 
 @Service
 class MigrationService(
@@ -38,7 +38,7 @@ class MigrationService(
         usersRepository.saveAndFlush(
           userMigrationRequest.copyUserFrom(existingUser),
         ).also { updatedUser ->
-          usersRepository.saveAndFlush(userMigrationRequest.withEmailsAdded(updatedUser, primaryEmailDetector))
+          usersRepository.saveAndFlush(userMigrationRequest.addEmailsTo(updatedUser, primaryEmailDetector))
         }
       }
       .orElseGet {

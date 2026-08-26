@@ -20,11 +20,11 @@ fun UserMigrationRequest.toUser(primaryEmailDetector: PrimaryEmailDetector): Use
       modifiedBy = modifiedBy,
     )
 
-    return withEmailsAdded(user, primaryEmailDetector)
+    return addEmailsTo(user, primaryEmailDetector)
   }
 }
 
-fun UserMigrationRequest.withEmailsAdded(user: User, primaryEmailDetector: PrimaryEmailDetector): User {
+fun UserMigrationRequest.addEmailsTo(user: User, primaryEmailDetector: PrimaryEmailDetector): User {
   with(this.user) {
     val emails = this.emails.orEmpty().sortedBy { it.legacyEmailId }
     val primaryEmail: String? = primaryEmailDetector.getPrimaryEmail(emails)
