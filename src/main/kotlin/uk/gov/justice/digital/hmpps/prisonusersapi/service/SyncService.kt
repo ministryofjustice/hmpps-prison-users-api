@@ -201,7 +201,6 @@ class SyncService(
         }
       }
       return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
-
     } finally {
       // Release the lock by deleting the row before transaction completes.
       syncLockRepository.deleteById(legacyStaffId)
