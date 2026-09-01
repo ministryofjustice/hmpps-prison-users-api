@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
@@ -37,15 +38,15 @@ class SyncService(
 
   private val transactionTemplate = TransactionTemplate(transactionManager)
 
-  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest) {
+  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
     val startedAtMs = System.currentTimeMillis()
 
     while (true) {
       try {
-        transactionTemplate.executeWithoutResult {
+        val syncResponse = transactionTemplate.execute {
           syncUserInTransaction(legacyStaffId, request)
         }
-        return
+        return syncResponse
       } catch (e: SyncLockBusyException) {
         if (System.currentTimeMillis() - startedAtMs >= lockMaxWaitMs) {
           throw SyncLockAcquisitionTimeoutException(
@@ -70,7 +71,7 @@ class SyncService(
     }
   }
 
-  private fun syncUserInTransaction(legacyStaffId: Long, request: PrisonUserSyncRequest) {
+  private fun syncUserInTransaction(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
     try {
       // Serialize sync operations by holding a lock row for the duration of this transaction.
       try {
@@ -199,6 +200,8 @@ class SyncService(
           )
         }
       }
+      return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
+
     } finally {
       // Release the lock by deleting the row before transaction completes.
       syncLockRepository.deleteById(legacyStaffId)

@@ -140,7 +140,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(999999)
 
       webTestClient.get().uri("/reconciliation/user/999999")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -181,7 +184,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -209,7 +215,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -236,7 +245,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -255,7 +267,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
         .body(BodyInserters.fromValue(minimalSyncRequest(emails = emptyList())))
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -289,7 +304,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -327,7 +345,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -367,7 +388,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -396,7 +420,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
@@ -430,7 +457,10 @@ class SyncResourceIntTest : IntegrationTestBase() {
           ),
         )
         .exchange()
-        .expectStatus().isNoContent
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
