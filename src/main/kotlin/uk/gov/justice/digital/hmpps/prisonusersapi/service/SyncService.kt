@@ -130,10 +130,12 @@ class SyncService(
       // Update or create each account from the request.
       request.accounts.forEach { syncAccount ->
         val activeCaseload = syncAccount.activeCaseloadId?.let { activeCaseloadId ->
-          // Active caseload may or may not appear in the accessible caseloads list.
-          caseloadsById[activeCaseloadId]
-            ?: caseloadRepository.findByIdOrNull(activeCaseloadId)
-            ?: throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+
+          if (caseloadRepository.findByIdOrNull(activeCaseloadId) == null) throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+
+          val accountCaseloads = syncAccount.caseloads.map { caseloadsById[it.caseloadId] }.associateBy { it!!.id }
+          accountCaseloads[activeCaseloadId]
+            ?: throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found in user accessible caseloads for user ${syncAccount.username}")
         }
 
         val existingAccount = existingAccounts.find { it.username == syncAccount.username }

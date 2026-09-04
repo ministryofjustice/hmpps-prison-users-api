@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -23,6 +25,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
 import java.time.LocalDateTime
 
@@ -30,6 +33,9 @@ private const val SYNC_ROLE = "ROLE_PRISON_USERS_API__SYNC__RW"
 private const val RECONCILIATION_ROLE = "ROLE_PRISON_USERS_API__MIGRATION__RW"
 
 class SyncResourceIntTest : IntegrationTestBase() {
+
+  @Autowired
+  private lateinit var userAccountRepository: UserAccountRepository
 
   @Autowired
   private lateinit var migrationService: MigrationService
@@ -128,6 +134,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
                 syncAccount(
                   username = "NEW_SYNC_USER",
                   activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("LEI")),
                   roles = listOf(syncRole("ROLE_CREATED_ONE")),
                 ),
                 syncAccount(
@@ -164,6 +171,322 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .jsonPath("accounts[1].username").isEqualTo("NEW_SYNC_USER_ADMIN")
         .jsonPath("accounts[1].caseloads.length()").isEqualTo(1)
         .jsonPath("accounts[1].caseloads[0].caseloadId").isEqualTo("MDI")
+    }
+
+    // ── Validation failures ──────────────────────────────────────────────────
+
+    @Test
+    fun unrecognisedAccessibleCaseload() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "SYNC_USER",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("NOT_A_CASELOAD")),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Caseload not found: Caseload(s) [NOT_A_CASELOAD] not found")
+    }
+
+    @Test
+    fun activeCaseloadNotFoundAndNoUserAccessibleCaseloads() {
+      assertTrue(userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy").isEmpty)
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "testy",
+                  activeCaseloadId = "NOT_A_CASELOAD",
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Caseload not found: Active caseload NOT_A_CASELOAD not found for user testy")
+
+      val optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy")
+      assertFalse(optionalUserAccount.isPresent)
+    }
+
+    @Test
+    fun activeCaseloadNotPresentInUserAccessibleCaseloads() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "testy",
+                  activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload LEI not found in user accessible caseloads for user testy")
+    }
+
+    @Test
+    fun activeCaseloadIdOnlyPresentInMigratedUserAccessibleCaseloadRelatingToDifferentUserAccount() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "testy-1",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("LEI")),
+                ),
+                syncAccount(
+                  username = "testy-2",
+                  activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
+
+      var optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
+      assertFalse(optionalUserAccount.isPresent)
+
+      optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-2")
+      assertFalse(optionalUserAccount.isPresent)
+    }
+
+    @Test
+    fun activeCaseloadIdOnlyPresentInMigratedUserAccessibleCaseloadRelatingToDifferentUserAccountAndNoUserAccessibleCaseloadsPresentForAccount() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "testy-1",
+                  activeCaseloadId = "MDI",
+                ),
+                syncAccount(
+                  username = "testy-2",
+                  activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("MDI"), syncCaseload("LEI")),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload MDI not found in user accessible caseloads for user testy-1")
+
+      var optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-1")
+      assertFalse(optionalUserAccount.isPresent)
+
+      optionalUserAccount = userAccountRepository.findWithUserAndActiveCaseloadByUsername("testy-2")
+      assertFalse(optionalUserAccount.isPresent)
+    }
+
+    @Test
+    fun activeCaseloadIdSetAndNoUserAccessibleCaseloadsPresent() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "testy-1",
+                  activeCaseloadId = "LEI",
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isEqualTo("Validation failure: Active caseload LEI not found in user accessible caseloads for user testy-1")
+    }
+
+    @Test
+    fun incompleteUserInvalid() {
+      val request: Map<String, Any?> = mapOf(
+        "firstName" to "Test",
+        "emails" to emptyList<SyncPrisonUserEmail>(),
+        "accounts" to emptyList<SyncPrisonUserAccount>(),
+      )
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
+    }
+
+    @Test
+    fun incompleteUserEmailInvalid() {
+      val request: Map<String, Any?> = mapOf(
+        "firstName" to "Test",
+        "lastName" to "User",
+        "status" to UserStatus.ACTIVE,
+        "createdTimestamp" to LocalDateTime.now(),
+        "createdBy" to "TEST_USER",
+        "emails" to listOf(
+          mapOf<String, Any?>(
+            "createdBy" to "Test",
+          ),
+        ),
+        "accounts" to emptyList<SyncPrisonUserAccount>(),
+      )
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
+    }
+
+    @Test
+    fun incompleteUserAccountInvalid() {
+      val request: Map<String, Any?> = mapOf(
+        "firstName" to "Test",
+        "lastName" to "User",
+        "status" to UserStatus.ACTIVE,
+        "createdTimestamp" to LocalDateTime.now(),
+        "createdBy" to "TEST_USER",
+        "emails" to emptyList<SyncPrisonUserEmail>(),
+        "accounts" to listOf(
+          mapOf<String, Any?>(
+            "username" to "testy",
+          ),
+        ),
+      )
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
+    }
+
+    @Test
+    fun incompleteUserAccountCaseloadInvalid() {
+      val request: Map<String, Any?> = mapOf(
+        "firstName" to "Test",
+        "lastName" to "User",
+        "status" to UserStatus.ACTIVE,
+        "createdTimestamp" to LocalDateTime.now(),
+        "createdBy" to "TEST_USER",
+        "emails" to emptyList<SyncPrisonUserEmail>(),
+        "accounts" to listOf(
+          mapOf<String, Any?>(
+            "username" to "testy",
+            "activeCaseloadId" to "LEI",
+            "caseloads" to listOf(
+              mapOf<String, Any?>(
+                "caseloadId" to "LEI",
+                "createdTimestamp" to LocalDateTime.now(),
+                "createdBy" to "Test",
+              ),
+              mapOf<String, Any?>(
+                "createdBy" to "Test",
+              ),
+            ),
+          ),
+        ),
+      )
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
+    }
+
+    @Test
+    fun incompleteUserAccountRoleInvalid() {
+      val request: Map<String, Any?> = mapOf(
+        "firstName" to "Test",
+        "lastName" to "User",
+        "status" to UserStatus.ACTIVE,
+        "createdTimestamp" to LocalDateTime.now(),
+        "createdBy" to "TEST_USER",
+        "emails" to emptyList<SyncPrisonUserEmail>(),
+        "accounts" to listOf(
+          mapOf<String, Any?>(
+            "username" to "testy",
+            "activeCaseloadId" to "LEI",
+            "caseloads" to listOf(
+              mapOf<String, Any?>(
+                "caseloadId" to "LEI",
+                "createdTimestamp" to LocalDateTime.now(),
+                "createdBy" to "Test",
+              ),
+            ),
+            "roles" to listOf(
+              mapOf<String, Any?>(
+                "createdBy" to "Test",
+              ),
+            ),
+          ),
+        ),
+      )
+
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("userMessage")
+        .isNotEmpty
     }
 
     // ── Scalar field updates ─────────────────────────────────────────────────
@@ -297,8 +620,9 @@ class SyncResourceIntTest : IntegrationTestBase() {
                   accountStatus = AccountStatus.LOCKED,
                   activeCaseloadId = "MDI",
                   lastLoggedIn = lastLoggedIn,
+                  caseloads = listOf(syncCaseload("MDI")),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
               ),
             ),
           ),
@@ -333,13 +657,14 @@ class SyncResourceIntTest : IntegrationTestBase() {
                 syncAccount(
                   username = "SYNC_USER",
                   activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("LEI")),
                   roles = listOf(
                     syncRole("ROLE_NEW_ONE"),
                     syncRole("ROLE_NEW_TWO"),
                     syncRole("ROLE_NEW_THREE"),
                   ),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
               ),
             ),
           ),
@@ -382,7 +707,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
                     syncCaseload("WWI"),
                   ),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
               ),
             ),
           ),
@@ -414,7 +739,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
             minimalSyncRequest(
               accounts = listOf(
                 // Only keep SYNC_USER_ADMIN; SYNC_USER should be removed
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
               ),
             ),
           ),
@@ -444,8 +769,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
           BodyInserters.fromValue(
             minimalSyncRequest(
               accounts = listOf(
-                syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI"),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+                syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncCaseload("LEI"))),
+                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
                 syncAccount(
                   username = "SYNC_USER_NEW",
                   activeCaseloadId = "WWI",
@@ -517,8 +842,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
       syncEmail("sync.user@justice.gov.uk"),
     ),
     accounts: List<SyncPrisonUserAccount> = listOf(
-      syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI"),
-      syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
+      syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncCaseload("LEI"))),
+      syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
     ),
   ) = PrisonUserSyncRequest(
     firstName = firstName,
