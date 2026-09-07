@@ -224,3 +224,7 @@ class SyncService(
 class SyncLockAcquisitionTimeoutException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
 private class SyncLockBusyException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
+class ActiveCaseloadNotInUserAccessibleCaseloadsException(message: String?) : RuntimeException(message)
+
+class CaseloadNotFoundException(message: String?) : RuntimeException(message)

@@ -12,12 +12,6 @@ import org.springframework.web.reactive.function.BodyInserters
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUser
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserAccessibleCaseload
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserEmail
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserRole
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.UserMigrationRequest
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserCaseload
@@ -26,7 +20,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDateTime
 
 private const val SYNC_ROLE = "ROLE_PRISON_USERS_API__SYNC__RW"
@@ -35,10 +29,10 @@ private const val RECONCILIATION_ROLE = "ROLE_PRISON_USERS_API__MIGRATION__RW"
 class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
-  private lateinit var userAccountRepository: UserAccountRepository
+  private lateinit var syncService: SyncService
 
   @Autowired
-  private lateinit var migrationService: MigrationService
+  private lateinit var userAccountRepository: UserAccountRepository
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
@@ -53,33 +47,21 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
     @BeforeEach
     internal fun createUser() {
-      migrationService.migrateUser(
-        UserMigrationRequest(
-          user = MigratedUser(
-            staffId = legacyStaffId,
-            emails = listOf(
-              migratedUserEmail("sync.user@example.org", 1),
-              migratedUserEmail("sync.user@justice.gov.uk", 2),
-            ),
-            firstName = "Original",
-            lastName = "Name",
-            status = UserStatus.ACTIVE,
-            createdTimestamp = createdAt,
-            createdBy = "MIGRATION_TEST",
+      syncService.syncUser(
+        legacyStaffId,
+        PrisonUserSyncRequest(
+          firstName = "Original",
+          lastName = "Name",
+          status = UserStatus.ACTIVE,
+          createdTimestamp = createdAt,
+          createdBy = "MIGRATION_TEST",
+          emails = listOf(
+            syncUserEmail("sync.user@example.org"),
+            syncUserEmail("sync.user@justice.gov.uk"),
           ),
           accounts = listOf(
-            migratedUserAccount(username = "SYNC_USER", activeCaseloadId = "LEI"),
-            migratedUserAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI"),
-          ),
-          roles = listOf(
-            migratedUserRole(username = "SYNC_USER", roleCode = "ROLE_OLD_ONE"),
-            migratedUserRole(username = "SYNC_USER", roleCode = "ROLE_OLD_TWO"),
-            migratedUserRole(username = "SYNC_USER_ADMIN", roleCode = "ROLE_ADMIN_OLD"),
-          ),
-          accessibleCaseloads = listOf(
-            migratedAccessibleCaseload(username = "SYNC_USER", caseloadId = "LEI"),
-            migratedAccessibleCaseload(username = "SYNC_USER", caseloadId = "MDI"),
-            migratedAccessibleCaseload(username = "SYNC_USER_ADMIN", caseloadId = "MDI"),
+            syncPrisonUserAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncPrisonUserCaseload("LEI"), syncPrisonUserCaseload("MDI")), roles = listOf(syncPrisonUserRole(roleCode = "ROLE_OLD_ONE"), syncPrisonUserRole(roleCode = "ROLE_OLD_TWO"))),
+            syncPrisonUserAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncPrisonUserCaseload("MDI")), roles = listOf(syncPrisonUserRole(roleCode = "ROLE_ADMIN_OLD"))),
           ),
         ),
       )
@@ -895,31 +877,30 @@ class SyncResourceIntTest : IntegrationTestBase() {
     createdBy = "SYNC_TEST",
   )
 
-  private fun migratedUserAccount(username: String, activeCaseloadId: String) = MigratedUserAccount(
+  private fun syncPrisonUserAccount(username: String, activeCaseloadId: String, caseloads: List<SyncPrisonUserCaseload> = listOf(), roles: List<SyncPrisonUserRole> = listOf()) = SyncPrisonUserAccount(
     username = username,
     accountType = UsageType.GENERAL,
     accountStatus = AccountStatus.OPEN,
     activeCaseloadId = activeCaseloadId,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "MIGRATION_TEST",
+    caseloads = caseloads,
+    roles = roles,
   )
 
-  private fun migratedUserEmail(email: String, legacyEmailId: Long) = MigratedUserEmail(
+  private fun syncUserEmail(email: String) = SyncPrisonUserEmail(
     email = email,
-    legacyEmailId = legacyEmailId,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "MIGRATION_TEST",
   )
 
-  private fun migratedAccessibleCaseload(username: String, caseloadId: String) = MigratedUserAccessibleCaseload(
-    username = username,
+  private fun syncPrisonUserCaseload(caseloadId: String) = SyncPrisonUserCaseload(
     caseloadId = caseloadId,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "MIGRATION_TEST",
   )
 
-  private fun migratedUserRole(username: String, roleCode: String) = MigratedUserRole(
-    username = username,
+  private fun syncPrisonUserRole(roleCode: String) = SyncPrisonUserRole(
     roleCode = roleCode,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "MIGRATION_TEST",

@@ -9,22 +9,21 @@ import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUser
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserAccessibleCaseload
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserEmail
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.MigratedUserRole
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.migrate.UserMigrationRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserCaseload
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.MigrationService
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class ReconciliationResourceIntTest : IntegrationTestBase() {
 
   @Autowired
-  private lateinit var migrationService: MigrationService
+  private lateinit var syncService: SyncService
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
@@ -36,33 +35,41 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
 
     @BeforeEach
     internal fun createUser() {
-      migrationService.migrateUser(
-        UserMigrationRequest(
-          user = MigratedUser(
-            staffId = legacyStaffId,
-            emails = listOf(
-              migratedUserEmail("person@example.org", 1),
-              migratedUserEmail("person@justice.gov.uk", 2),
-            ),
-            firstName = "Recon",
-            lastName = "User",
-            status = UserStatus.ACTIVE,
-            createdTimestamp = LocalDateTime.now(),
-            createdBy = "MIGRATION_TEST",
+      syncService.syncUser(
+        legacyStaffId,
+        PrisonUserSyncRequest(
+          firstName = "Recon",
+          lastName = "User",
+          status = UserStatus.ACTIVE,
+          createdTimestamp = LocalDateTime.now(),
+          createdBy = "MIGRATION_TEST",
+          emails = listOf(
+            syncPrisonUserEmail("person@example.org"),
+            syncPrisonUserEmail("person@justice.gov.uk"),
           ),
           accounts = listOf(
-            userAccount(username = "RECON_USER", activeCaseloadId = "LEI"),
-            userAccount(username = "RECON_USER_2", activeCaseloadId = "MDI"),
-          ),
-          roles = listOf(
-            userRole(username = "RECON_USER", roleCode = "ROLE_ALPHA"),
-            userRole(username = "RECON_USER", roleCode = "ROLE_BRAVO"),
-            userRole(username = "RECON_USER_2", roleCode = "ROLE_CHARLIE"),
-          ),
-          accessibleCaseloads = listOf(
-            accessibleCaseload(username = "RECON_USER", caseloadId = "LEI"),
-            accessibleCaseload(username = "RECON_USER", caseloadId = "MDI"),
-            accessibleCaseload(username = "RECON_USER_2", caseloadId = "MDI"),
+            userAccount(
+              username = "RECON_USER",
+              activeCaseloadId = "LEI",
+              caseloads = listOf(
+                accessibleCaseload(caseloadId = "LEI"),
+                accessibleCaseload(caseloadId = "MDI"),
+              ),
+              roles = listOf(
+                userRole(roleCode = "ROLE_ALPHA"),
+                userRole(roleCode = "ROLE_BRAVO"),
+              ),
+            ),
+            userAccount(
+              username = "RECON_USER_2",
+              activeCaseloadId = "MDI",
+              caseloads = listOf(
+                accessibleCaseload(caseloadId = "MDI"),
+              ),
+              roles = listOf(
+                userRole(roleCode = "ROLE_CHARLIE"),
+              ),
+            ),
           ),
         ),
       )
@@ -134,7 +141,7 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     }
   }
 
-  private fun userAccount(username: String, activeCaseloadId: String) = MigratedUserAccount(
+  private fun userAccount(username: String, activeCaseloadId: String, caseloads: List<SyncPrisonUserCaseload> = listOf(), roles: List<SyncPrisonUserRole> = listOf()) = SyncPrisonUserAccount(
     username = username,
     accountType = UsageType.GENERAL,
     accountStatus = AccountStatus.OPEN,
@@ -142,24 +149,23 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     lastLoggedIn = LocalDateTime.of(2022, 1, 1, 1, 1),
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
+    caseloads = caseloads,
+    roles = roles,
   )
 
-  private fun migratedUserEmail(email: String, legacyEmailId: Long) = MigratedUserEmail(
+  private fun syncPrisonUserEmail(email: String) = SyncPrisonUserEmail(
     email = email,
-    legacyEmailId = legacyEmailId,
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
   )
 
-  private fun accessibleCaseload(username: String, caseloadId: String) = MigratedUserAccessibleCaseload(
-    username = username,
+  private fun accessibleCaseload(caseloadId: String) = SyncPrisonUserCaseload(
     caseloadId = caseloadId,
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
   )
 
-  private fun userRole(username: String, roleCode: String) = MigratedUserRole(
-    username = username,
+  private fun userRole(roleCode: String) = SyncPrisonUserRole(
     roleCode = roleCode,
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
