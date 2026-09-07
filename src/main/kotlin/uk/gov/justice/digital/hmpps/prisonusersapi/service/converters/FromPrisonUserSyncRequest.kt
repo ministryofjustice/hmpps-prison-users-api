@@ -19,7 +19,7 @@ fun PrisonUserSyncRequest.toUser(legacyStaffId: Long): User = User(
 )
 
 fun PrisonUserSyncRequest.addEmailsTo(user: User, primaryEmailDetector: PrimaryEmailDetector): User {
-  val emails: List<SyncPrisonUserEmail> = this.emails.sortedBy { it.email }
+  val emails: List<SyncPrisonUserEmail> = this.emails
   val primaryEmail: String? = primaryEmailDetector.getPrimaryEmail(emails)
   emails.forEach {
     user.addUserEmail(

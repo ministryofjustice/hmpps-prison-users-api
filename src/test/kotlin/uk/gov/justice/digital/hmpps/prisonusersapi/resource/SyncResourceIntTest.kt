@@ -60,8 +60,21 @@ class SyncResourceIntTest : IntegrationTestBase() {
             syncUserEmail("sync.user@justice.gov.uk"),
           ),
           accounts = listOf(
-            syncPrisonUserAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncPrisonUserCaseload("LEI"), syncPrisonUserCaseload("MDI")), roles = listOf(syncPrisonUserRole(roleCode = "ROLE_OLD_ONE"), syncPrisonUserRole(roleCode = "ROLE_OLD_TWO"))),
-            syncPrisonUserAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncPrisonUserCaseload("MDI")), roles = listOf(syncPrisonUserRole(roleCode = "ROLE_ADMIN_OLD"))),
+            syncPrisonUserAccount(
+              username = "SYNC_USER",
+              activeCaseloadId = "LEI",
+              caseloads = listOf(syncPrisonUserCaseload("LEI"), syncPrisonUserCaseload("MDI")),
+              roles = listOf(
+                syncPrisonUserRole(roleCode = "ROLE_OLD_ONE"),
+                syncPrisonUserRole(roleCode = "ROLE_OLD_TWO"),
+              ),
+            ),
+            syncPrisonUserAccount(
+              username = "SYNC_USER_ADMIN",
+              activeCaseloadId = "MDI",
+              caseloads = listOf(syncPrisonUserCaseload("MDI")),
+              roles = listOf(syncPrisonUserRole(roleCode = "ROLE_ADMIN_OLD")),
+            ),
           ),
         ),
       )
@@ -604,7 +617,11 @@ class SyncResourceIntTest : IntegrationTestBase() {
                   lastLoggedIn = lastLoggedIn,
                   caseloads = listOf(syncCaseload("MDI")),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
               ),
             ),
           ),
@@ -646,7 +663,11 @@ class SyncResourceIntTest : IntegrationTestBase() {
                     syncRole("ROLE_NEW_THREE"),
                   ),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
               ),
             ),
           ),
@@ -689,7 +710,11 @@ class SyncResourceIntTest : IntegrationTestBase() {
                     syncCaseload("WWI"),
                   ),
                 ),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
               ),
             ),
           ),
@@ -721,7 +746,11 @@ class SyncResourceIntTest : IntegrationTestBase() {
             minimalSyncRequest(
               accounts = listOf(
                 // Only keep SYNC_USER_ADMIN; SYNC_USER should be removed
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
               ),
             ),
           ),
@@ -751,8 +780,16 @@ class SyncResourceIntTest : IntegrationTestBase() {
           BodyInserters.fromValue(
             minimalSyncRequest(
               accounts = listOf(
-                syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncCaseload("LEI"))),
-                syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+                syncAccount(
+                  username = "SYNC_USER",
+                  activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("LEI")),
+                ),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "MDI",
+                  caseloads = listOf(syncCaseload("MDI")),
+                ),
                 syncAccount(
                   username = "SYNC_USER_NEW",
                   activeCaseloadId = "WWI",
@@ -825,7 +862,11 @@ class SyncResourceIntTest : IntegrationTestBase() {
     ),
     accounts: List<SyncPrisonUserAccount> = listOf(
       syncAccount(username = "SYNC_USER", activeCaseloadId = "LEI", caseloads = listOf(syncCaseload("LEI"))),
-      syncAccount(username = "SYNC_USER_ADMIN", activeCaseloadId = "MDI", caseloads = listOf(syncCaseload("MDI"))),
+      syncAccount(
+        username = "SYNC_USER_ADMIN",
+        activeCaseloadId = "MDI",
+        caseloads = listOf(syncCaseload("MDI")),
+      ),
     ),
   ) = PrisonUserSyncRequest(
     firstName = firstName,
@@ -877,7 +918,12 @@ class SyncResourceIntTest : IntegrationTestBase() {
     createdBy = "SYNC_TEST",
   )
 
-  private fun syncPrisonUserAccount(username: String, activeCaseloadId: String, caseloads: List<SyncPrisonUserCaseload> = listOf(), roles: List<SyncPrisonUserRole> = listOf()) = SyncPrisonUserAccount(
+  private fun syncPrisonUserAccount(
+    username: String,
+    activeCaseloadId: String,
+    caseloads: List<SyncPrisonUserCaseload> = listOf(),
+    roles: List<SyncPrisonUserRole> = listOf(),
+  ) = SyncPrisonUserAccount(
     username = username,
     accountType = UsageType.GENERAL,
     accountStatus = AccountStatus.OPEN,

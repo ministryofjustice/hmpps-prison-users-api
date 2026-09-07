@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
+import org.hibernate.validator.internal.util.Contracts.assertNotNull
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
@@ -46,6 +47,7 @@ class SyncService(
         val syncResponse = transactionTemplate.execute {
           syncUserInTransaction(legacyStaffId, request)
         }
+        assertNotNull(syncResponse, "Transaction returned null response for legacy staff id $legacyStaffId")
         return syncResponse
       } catch (e: SyncLockBusyException) {
         if (System.currentTimeMillis() - startedAtMs >= lockMaxWaitMs) {
@@ -130,8 +132,9 @@ class SyncService(
       // Update or create each account from the request.
       request.accounts.forEach { syncAccount ->
         val activeCaseload = syncAccount.activeCaseloadId?.let { activeCaseloadId ->
-
-          if (caseloadRepository.findByIdOrNull(activeCaseloadId) == null) throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+          if (!caseloadsById.containsKey(activeCaseloadId)) {
+            if (caseloadRepository.findByIdOrNull(activeCaseloadId) == null) throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+          }
 
           val accountCaseloads = syncAccount.caseloads.map { caseloadsById[it.caseloadId] }.associateBy { it!!.id }
           accountCaseloads[activeCaseloadId]

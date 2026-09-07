@@ -39,7 +39,7 @@ class SyncResource(
     ),
     responses = [
       ApiResponse(
-        responseCode = "204",
+        responseCode = "200",
         description = "Prison User sync successful.",
       ),
       ApiResponse(
