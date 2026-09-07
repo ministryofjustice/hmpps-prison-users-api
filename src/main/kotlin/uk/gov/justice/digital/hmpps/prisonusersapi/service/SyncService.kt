@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
-import org.hibernate.validator.internal.util.Contracts.assertNotNull
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
@@ -47,7 +46,7 @@ class SyncService(
         val syncResponse = transactionTemplate.execute {
           syncUserInTransaction(legacyStaffId, request)
         }
-        assertNotNull(syncResponse, "Transaction returned null response for legacy staff id $legacyStaffId")
+        requireNotNull(syncResponse) { "Transaction returned null response for legacy staff id $legacyStaffId" }
         return syncResponse
       } catch (e: SyncLockBusyException) {
         if (System.currentTimeMillis() - startedAtMs >= lockMaxWaitMs) {

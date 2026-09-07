@@ -28,6 +28,8 @@ fun PrisonUserSyncRequest.addEmailsTo(user: User, primaryEmailDetector: PrimaryE
         isPrimary = it.email == primaryEmail,
         createdBy = it.createdBy,
         createdTimestamp = it.createdTimestamp,
+        modifiedBy = it.modifiedBy,
+        modifiedTimestamp = it.modifiedTimestamp,
         user = user,
       ),
     )
