@@ -21,39 +21,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.ActiveCaseloadNotInUserAccessibleCaseloadsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.CaseloadNotFoundException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncLockAcquisitionTimeoutException
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccessibleCaseloadsWithoutUserAccountException
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAccountAlreadyExistsException
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserAlreadyExistsException
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserNotFoundException
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserRoleWithoutUserAccountException
 
 @RestControllerAdvice
 class PrisonUsersApiExceptionHandler {
 
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> = ResponseEntity
-    .status(BAD_REQUEST)
-    .body(
-      ErrorResponse(
-        status = BAD_REQUEST,
-        userMessage = "Validation failure: ${e.message}",
-        developerMessage = e.message,
-      ),
-    ).also { logValidationFailureFor(e) }
-
-  @ExceptionHandler(UserAccessibleCaseloadsWithoutUserAccountException::class)
-  fun handleUserAccessibleCaseloadsWithoutUserAccountException(e: UserAccessibleCaseloadsWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
-    .status(BAD_REQUEST)
-    .body(
-      ErrorResponse(
-        status = BAD_REQUEST,
-        userMessage = "Validation failure: ${e.message}",
-        developerMessage = e.message,
-      ),
-    ).also { logValidationFailureFor(e) }
-
-  @ExceptionHandler(UserRoleWithoutUserAccountException::class)
-  fun handleUserRoleWithoutUserAccountException(e: UserRoleWithoutUserAccountException): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(BAD_REQUEST)
     .body(
       ErrorResponse(
@@ -133,34 +107,6 @@ class PrisonUsersApiExceptionHandler {
         ErrorResponse(
           status = NOT_FOUND,
           userMessage = "Caseload not found: ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
-  @ExceptionHandler(UserAlreadyExistsException::class)
-  fun handleUserAlreadyExistsException(e: UserAlreadyExistsException): ResponseEntity<ErrorResponse> {
-    log.debug("User already exists exception caught: {}", e.message)
-    return ResponseEntity
-      .status(CONFLICT)
-      .body(
-        ErrorResponse(
-          status = CONFLICT,
-          userMessage = "User already exists: ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
-  @ExceptionHandler(UserAccountAlreadyExistsException::class)
-  fun handleUserAccountAlreadyExistsException(e: UserAccountAlreadyExistsException): ResponseEntity<ErrorResponse> {
-    log.debug("User account already exists exception caught: {}", e.message)
-    return ResponseEntity
-      .status(CONFLICT)
-      .body(
-        ErrorResponse(
-          status = CONFLICT,
-          userMessage = "User account already exists: ${e.message}",
           developerMessage = e.message,
         ),
       )

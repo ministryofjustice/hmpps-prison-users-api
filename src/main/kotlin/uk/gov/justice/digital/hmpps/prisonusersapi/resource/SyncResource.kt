@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 
 @RestController
@@ -38,7 +39,7 @@ class SyncResource(
     ),
     responses = [
       ApiResponse(
-        responseCode = "204",
+        responseCode = "200",
         description = "Prison User sync successful.",
       ),
       ApiResponse(
@@ -58,7 +59,7 @@ class SyncResource(
       ),
       ApiResponse(
         responseCode = "409",
-        description = "Sync lock could not be acquired within max wait time",
+        description = "Data integrity violation or sync lock could not be acquired within max wait time",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -68,8 +69,8 @@ class SyncResource(
     @PathVariable
     legacyStaffId: Long,
     @RequestBody request: PrisonUserSyncRequest,
-  ): ResponseEntity<Void> {
-    syncService.syncUser(legacyStaffId, request)
-    return ResponseEntity.noContent().build()
+  ): ResponseEntity<PrisonUserSyncResponse> {
+    val response = syncService.syncUser(legacyStaffId, request)
+    return ResponseEntity.ok(response)
   }
 }

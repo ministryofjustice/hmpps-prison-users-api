@@ -7,12 +7,12 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
@@ -20,6 +20,8 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockReposi
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 
 @Service
 class SyncService(
@@ -36,15 +38,16 @@ class SyncService(
 
   private val transactionTemplate = TransactionTemplate(transactionManager)
 
-  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest) {
+  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
     val startedAtMs = System.currentTimeMillis()
 
     while (true) {
       try {
-        transactionTemplate.executeWithoutResult {
+        val syncResponse = transactionTemplate.execute {
           syncUserInTransaction(legacyStaffId, request)
         }
-        return
+        requireNotNull(syncResponse) { "Transaction returned null response for legacy staff id $legacyStaffId" }
+        return syncResponse
       } catch (e: SyncLockBusyException) {
         if (System.currentTimeMillis() - startedAtMs >= lockMaxWaitMs) {
           throw SyncLockAcquisitionTimeoutException(
@@ -69,7 +72,7 @@ class SyncService(
     }
   }
 
-  private fun syncUserInTransaction(legacyStaffId: Long, request: PrisonUserSyncRequest) {
+  private fun syncUserInTransaction(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
     try {
       // Serialize sync operations by holding a lock row for the duration of this transaction.
       try {
@@ -90,36 +93,12 @@ class SyncService(
         }
         .orElseGet {
           usersRepository.saveAndFlush(
-            User(
-              firstName = request.firstName,
-              lastName = request.lastName,
-              status = request.status,
-              legacyStaffId = legacyStaffId,
-              createdTimestamp = request.createdTimestamp,
-              createdBy = request.createdBy,
-              modifiedTimestamp = request.modifiedTimestamp,
-              modifiedBy = request.modifiedBy,
-              userEmails = mutableListOf(),
-            ),
+            request.toUser(legacyStaffId),
           )
         }
 
       // Insert new emails directly into the managed collection so JPA handles the INSERT via cascade.
-      val primaryEmail = primaryEmailDetector.getPrimaryEmail(request.emails)
-
-      request.emails.forEach { syncEmail ->
-        updatedUser.addUserEmail(
-          UserEmail(
-            email = syncEmail.email,
-            isPrimary = syncEmail.email == primaryEmail,
-            createdBy = syncEmail.createdBy,
-            createdTimestamp = syncEmail.createdTimestamp,
-            modifiedBy = syncEmail.modifiedBy,
-            modifiedTimestamp = syncEmail.modifiedTimestamp,
-            user = updatedUser,
-          ),
-        )
-      }
+      request.addEmailsTo(updatedUser, primaryEmailDetector)
 
       // Load existing accounts for this user (with caseloads eagerly via withCaseloads graph).
       val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(updatedUser.userId))
@@ -152,10 +131,13 @@ class SyncService(
       // Update or create each account from the request.
       request.accounts.forEach { syncAccount ->
         val activeCaseload = syncAccount.activeCaseloadId?.let { activeCaseloadId ->
-          // Active caseload may or may not appear in the accessible caseloads list.
-          caseloadsById[activeCaseloadId]
-            ?: caseloadRepository.findByIdOrNull(activeCaseloadId)
-            ?: throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+          if (!caseloadsById.containsKey(activeCaseloadId)) {
+            if (caseloadRepository.findByIdOrNull(activeCaseloadId) == null) throw CaseloadNotFoundException("Active caseload $activeCaseloadId not found for user ${syncAccount.username}")
+          }
+
+          val accountCaseloads = syncAccount.caseloads.map { caseloadsById[it.caseloadId] }.associateBy { it!!.id }
+          accountCaseloads[activeCaseloadId]
+            ?: throw ActiveCaseloadNotInUserAccessibleCaseloadsException("Active caseload $activeCaseloadId not found in user accessible caseloads for user ${syncAccount.username}")
         }
 
         val existingAccount = existingAccounts.find { it.username == syncAccount.username }
@@ -222,6 +204,7 @@ class SyncService(
           )
         }
       }
+      return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
     } finally {
       // Release the lock by deleting the row before transaction completes.
       syncLockRepository.deleteById(legacyStaffId)
@@ -243,3 +226,7 @@ class SyncService(
 class SyncLockAcquisitionTimeoutException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
 private class SyncLockBusyException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
+class ActiveCaseloadNotInUserAccessibleCaseloadsException(message: String?) : RuntimeException(message)
+
+class CaseloadNotFoundException(message: String?) : RuntimeException(message)
