@@ -38,6 +38,16 @@ spring:
   flyway:
     locations: classpath:db/prison-users
 
+  jpa:
+    properties:
+      org:
+        hibernate:
+          envers:
+            audit_table_suffix: _audit
+            audit_strategy: org.hibernate.envers.strategy.DefaultAuditStrategy
+            store_data_at_delete: true
+            default_schema: null
+
   profiles:
     group:
       test:
