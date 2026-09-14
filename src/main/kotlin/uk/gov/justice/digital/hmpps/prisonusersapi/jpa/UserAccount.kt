@@ -17,6 +17,7 @@ import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
+import org.hibernate.envers.RelationTargetAuditMode
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import java.time.LocalDateTime
@@ -91,7 +92,7 @@ data class UserAccount(
 
   @OneToOne(optional = true)
   @JoinColumn(name = "active_caseload_id")
-  @NotAudited
+  @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
   val activeCaseload: Caseload? = null,
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
