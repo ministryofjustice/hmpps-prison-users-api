@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.Table
+import org.hibernate.Hibernate
 import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import java.io.Serializable
@@ -40,7 +41,18 @@ data class UserCaseloadAdministrator(
   val createdTimestamp: LocalDateTime,
   val modifiedBy: String? = null,
   val modifiedTimestamp: LocalDateTime? = null,
-)
+) {
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+    other as UserCaseloadAdministrator
+
+    return id == other.id
+  }
+
+  override fun hashCode(): Int = id.hashCode()
+}
 
 @Embeddable
 data class UserCaseloadAdministratorId(
