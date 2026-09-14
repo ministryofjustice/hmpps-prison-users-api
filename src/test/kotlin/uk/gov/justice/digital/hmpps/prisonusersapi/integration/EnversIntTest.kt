@@ -12,16 +12,23 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.defaultUser
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministratorId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMemberId
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 class EnversIntTest : IntegrationTestBase() {
 
@@ -41,174 +48,331 @@ class EnversIntTest : IntegrationTestBase() {
   fun tearDown() = dataBuilder.deleteAll()
 
   @Nested
-  inner class UserAuditing {
+  inner class RepositoryBackedAuditing {
 
-    @Test
-    fun `captures create update and delete revisions for user`() {
-      val createdUser = usersRepository.saveAndFlush(
-        defaultUser().copy(
-          legacyStaffId = 900001L,
-          firstName = "Created",
-          lastName = "User",
-        ),
-      )
+    @Nested
+    inner class UserAuditing {
 
-      val updatedUser = usersRepository.saveAndFlush(
-        createdUser.copy(
-          firstName = "Updated",
-          modifiedBy = "TEST",
-          modifiedTimestamp = LocalDateTime.now(),
-        ),
-      )
+      @Test
+      fun `captures create update and delete revisions for user`() {
+        val createdUser = usersRepository.saveAndFlush(
+          defaultUser().copy(
+            legacyStaffId = 900001L,
+            firstName = "Created",
+            lastName = "User",
+          ),
+        )
 
-      usersRepository.delete(updatedUser)
-      usersRepository.flush()
+        val revisions = saveUpdateDelete(
+          entity = createdUser,
+          update = {
+            copy(
+              firstName = "Updated",
+              modifiedBy = "TEST",
+              modifiedTimestamp = LocalDateTime.now(),
+            )
+          },
+          save = usersRepository::saveAndFlush,
+          delete = {
+            usersRepository.delete(it)
+            usersRepository.flush()
+          },
+          entityClass = User::class.java,
+          auditId = createdUser.userId!!,
+        )
 
-      val revisions = auditRevisions(User::class.java, createdUser.userId!!)
+        assertThat(revisions.map { it.entity.firstName }).containsExactly("Created", "Updated", "Updated")
+        assertThat(revisions.map { it.entity.lastName }).containsExactly("User", "User", "User")
+        assertThat(revisions.map { it.entity.legacyStaffId }).containsExactly(900001L, 900001L, 900001L)
+      }
+    }
 
-      assertRevisionTypes(revisions)
-      assertThat(revisions.map { it.entity.firstName }).containsExactly("Created", "Updated", "Updated")
-      assertThat(revisions.map { it.entity.lastName }).containsExactly("User", "User", "User")
-      assertThat(revisions.map { it.entity.legacyStaffId }).containsExactly(900001L, 900001L, 900001L)
+    @Nested
+    inner class UserAccountAuditing {
+
+      @Test
+      fun `captures create update and delete revisions for user account`() {
+        val createdAccount = createGeneralAccount(username = "AUDIT_ACCOUNT", caseloadId = "MDI")
+        val expectedLastLoggedIn = LocalDateTime.of(2026, 1, 15, 9, 30)
+
+        val revisions = saveUpdateDelete(
+          entity = createdAccount,
+          update = {
+            copy(
+              lastLoggedIn = expectedLastLoggedIn,
+              modifiedBy = "TEST",
+              modifiedTimestamp = LocalDateTime.now(),
+            )
+          },
+          save = userAccountRepository::saveAndFlush,
+          delete = {
+            userAccountRepository.delete(it)
+            userAccountRepository.flush()
+          },
+          entityClass = UserAccount::class.java,
+          auditId = createdAccount.username,
+        )
+
+        assertThat(revisions.map { it.entity.username }).containsExactly("AUDIT_ACCOUNT", "AUDIT_ACCOUNT", "AUDIT_ACCOUNT")
+        assertThat(revisions.map { it.entity.lastLoggedIn }).containsExactly(null, expectedLastLoggedIn, expectedLastLoggedIn)
+        assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "TEST", "TEST")
+      }
     }
   }
 
   @Nested
-  inner class UserAccountAuditing {
+  inner class ChildEntityAuditing {
 
-    @Test
-    fun `captures create update and delete revisions for user account`() {
-      val createdAccount = dataBuilder.generalUser()
-        .username("AUDIT_ACCOUNT")
-        .atPrison("MDI")
-        .buildAndSave()
+    @Nested
+    inner class UserEmailAuditing {
 
-      val updatedAccount = userAccountRepository.saveAndFlush(
-        createdAccount.copy(
-          lastLoggedIn = LocalDateTime.of(2026, 1, 15, 9, 30),
-          modifiedBy = "TEST",
-          modifiedTimestamp = LocalDateTime.now(),
-        ),
-      )
+      @Test
+      fun `captures create update and delete revisions for user email`() {
+        val account = createGeneralAccount(username = "AUDIT_EMAIL", caseloadId = "LEI")
+        val createdTimestamp = LocalDateTime.of(2026, 4, 1, 8, 0)
+        var emailId: Long? = null
 
-      userAccountRepository.delete(updatedAccount)
-      userAccountRepository.flush()
+        val revisions = persistUpdateDelete(
+          create = { entityManager ->
+            val userEmail = UserEmail(
+              email = "audit.email@example.org",
+              isPrimary = false,
+              createdBy = "TEST",
+              createdTimestamp = createdTimestamp,
+              user = managedUser(entityManager, account.user.userId!!),
+            )
 
-      val revisions = auditRevisions(UserAccount::class.java, createdAccount.username)
+            entityManager.persist(userEmail)
+            entityManager.flush()
+            userEmail.id!!.also { emailId = it }
+          },
+          update = { entityManager ->
+            entityManager.merge(
+              entityManager.find(UserEmail::class.java, emailId!!).copy(
+                email = "audit.email@justice.gov.uk",
+                isPrimary = true,
+                modifiedBy = "TEST",
+                modifiedTimestamp = LocalDateTime.of(2026, 4, 2, 8, 0),
+              ),
+            )
+          },
+          delete = { entityManager ->
+            entityManager.remove(entityManager.find(UserEmail::class.java, emailId!!))
+          },
+          entityClass = UserEmail::class.java,
+        )
 
-      assertRevisionTypes(revisions)
-      assertThat(revisions.map { it.entity.username }).containsExactly("AUDIT_ACCOUNT", "AUDIT_ACCOUNT", "AUDIT_ACCOUNT")
-      assertThat(revisions.map { it.entity.lastLoggedIn }).containsExactly(null, LocalDateTime.of(2026, 1, 15, 9, 30), LocalDateTime.of(2026, 1, 15, 9, 30))
-      assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "TEST", "TEST")
+        assertThat(revisions.map { it.entity.email }).containsExactly("audit.email@example.org", "audit.email@justice.gov.uk", "audit.email@justice.gov.uk")
+        assertThat(revisions.map { it.entity.isPrimary }).containsExactly(false, true, true)
+        assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "TEST", "TEST")
+      }
+    }
+
+    @Nested
+    inner class CompositeKeyAuditing {
+
+      @Test
+      fun `captures create update and delete revisions for user role`() {
+        val account = createGeneralAccount(username = "AUDIT_ROLE", caseloadId = "WWI")
+        val roleId = UserRoleId(username = account.username, roleCode = "ROLE_AUDIT")
+        val createdTimestamp = LocalDateTime.of(2026, 5, 1, 8, 0)
+        val updatedTimestamp = LocalDateTime.of(2026, 5, 2, 8, 0)
+
+        val revisions = persistUpdateDelete(
+          create = { entityManager ->
+            entityManager.persist(
+              UserRole(
+                id = roleId,
+                userAccount = managedUserAccount(entityManager, account.username),
+                createdBy = "TEST",
+                createdTimestamp = createdTimestamp,
+              ),
+            )
+            roleId
+          },
+          update = { entityManager ->
+            entityManager.merge(
+              entityManager.find(UserRole::class.java, roleId).copy(
+                createdBy = "UPDATED_TEST",
+                createdTimestamp = updatedTimestamp,
+              ),
+            )
+          },
+          delete = { entityManager ->
+            entityManager.remove(entityManager.find(UserRole::class.java, roleId))
+          },
+          entityClass = UserRole::class.java,
+        )
+
+        assertThat(revisions.map { it.entity.id.roleCode }).containsExactly("ROLE_AUDIT", "ROLE_AUDIT", "ROLE_AUDIT")
+        assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "UPDATED_TEST", "UPDATED_TEST")
+        assertThat(revisions.map { it.entity.createdTimestamp }).containsExactly(createdTimestamp, updatedTimestamp, updatedTimestamp)
+      }
+
+      @Test
+      fun `captures create update and delete revisions for user accessible caseload`() {
+        val account = createGeneralAccount(username = "AUDIT_ACCESSIBLE", caseloadId = "WWI")
+        val accessibleCaseloadId = UserAccessibleCaseloadId(username = account.username, caseloadId = "MDI")
+        val createdTimestamp = LocalDateTime.of(2026, 6, 1, 8, 0)
+        val updatedTimestamp = LocalDateTime.of(2026, 6, 2, 8, 0)
+
+        val revisions = persistUpdateDelete(
+          create = { entityManager ->
+            entityManager.persist(
+              UserAccessibleCaseload(
+                id = accessibleCaseloadId,
+                caseload = managedCaseload(entityManager, "MDI"),
+                userAccount = managedUserAccount(entityManager, account.username),
+                createdBy = "TEST",
+                createdTimestamp = createdTimestamp,
+              ),
+            )
+            accessibleCaseloadId
+          },
+          update = { entityManager ->
+            entityManager.merge(
+              entityManager.find(UserAccessibleCaseload::class.java, accessibleCaseloadId).copy(
+                createdBy = "UPDATED_TEST",
+                createdTimestamp = updatedTimestamp,
+              ),
+            )
+          },
+          delete = { entityManager ->
+            entityManager.remove(entityManager.find(UserAccessibleCaseload::class.java, accessibleCaseloadId))
+          },
+          entityClass = UserAccessibleCaseload::class.java,
+        )
+
+        assertThat(revisions.map { it.entity.id.caseloadId }).containsExactly("MDI", "MDI", "MDI")
+        assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "UPDATED_TEST", "UPDATED_TEST")
+        assertThat(revisions.map { it.entity.createdTimestamp }).containsExactly(createdTimestamp, updatedTimestamp, updatedTimestamp)
+      }
+
+      @Test
+      fun `captures create update and delete revisions for user caseload member`() {
+        val account = createGeneralAccount(username = "AUDIT_MEMBER", caseloadId = "LEI")
+        val memberId = UserCaseloadMemberId(username = account.username, caseloadId = "LEI")
+        val startDate = LocalDate.of(2026, 2, 1)
+        val createdTimestamp = LocalDateTime.of(2026, 2, 1, 8, 0)
+        val expiryDate = LocalDate.of(2026, 12, 31)
+
+        val revisions = persistUpdateDelete(
+          create = { entityManager ->
+            entityManager.persist(
+              UserCaseloadMember(
+                id = memberId,
+                caseload = managedCaseload(entityManager, "LEI"),
+                userAccount = managedUserAccount(entityManager, account.username),
+                startDate = startDate,
+                active = true,
+                createdBy = "TEST",
+                createdTimestamp = createdTimestamp,
+              ),
+            )
+            memberId
+          },
+          update = { entityManager ->
+            entityManager.merge(
+              entityManager.find(UserCaseloadMember::class.java, memberId).copy(
+                expiryDate = expiryDate,
+                active = false,
+                modifiedBy = "TEST",
+                modifiedTimestamp = LocalDateTime.of(2026, 2, 10, 8, 0),
+              ),
+            )
+          },
+          delete = { entityManager ->
+            entityManager.remove(entityManager.find(UserCaseloadMember::class.java, memberId))
+          },
+          entityClass = UserCaseloadMember::class.java,
+        )
+
+        assertThat(revisions.map { it.entity.startDate }).containsExactly(startDate, startDate, startDate)
+        assertThat(revisions.map { it.entity.active }).containsExactly(true, false, false)
+        assertThat(revisions.map { it.entity.expiryDate }).containsExactly(null, expiryDate, expiryDate)
+      }
+
+      @Test
+      fun `captures create update and delete revisions for user caseload administrator`() {
+        val account = createGeneralAccount(username = "AUDIT_ADMIN", caseloadId = "WWI")
+        val administratorId = UserCaseloadAdministratorId(username = account.username, caseloadId = "WWI")
+        val expiryDate = LocalDate.of(2026, 11, 30)
+
+        val revisions = persistUpdateDelete(
+          create = { entityManager ->
+            entityManager.persist(
+              UserCaseloadAdministrator(
+                id = administratorId,
+                caseload = managedCaseload(entityManager, "WWI"),
+                userAccount = managedUserAccount(entityManager, account.username),
+                active = true,
+                createdBy = "TEST",
+                createdTimestamp = LocalDateTime.of(2026, 3, 1, 8, 0),
+              ),
+            )
+            administratorId
+          },
+          update = { entityManager ->
+            entityManager.merge(
+              entityManager.find(UserCaseloadAdministrator::class.java, administratorId).copy(
+                active = false,
+                expiryDate = expiryDate,
+                modifiedBy = "TEST",
+                modifiedTimestamp = LocalDateTime.of(2026, 3, 5, 8, 0),
+              ),
+            )
+          },
+          delete = { entityManager ->
+            entityManager.remove(entityManager.find(UserCaseloadAdministrator::class.java, administratorId))
+          },
+          entityClass = UserCaseloadAdministrator::class.java,
+        )
+
+        assertThat(revisions.map { it.entity.active }).containsExactly(true, false, false)
+        assertThat(revisions.map { it.entity.expiryDate }).containsExactly(null, expiryDate, expiryDate)
+        assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "TEST", "TEST")
+      }
     }
   }
 
-  @Nested
-  inner class UserCaseloadMemberAuditing {
+  private fun createGeneralAccount(username: String, caseloadId: String): UserAccount =
+    dataBuilder.generalUser()
+      .username(username)
+      .atPrison(caseloadId)
+      .buildAndSave()
 
-    @Test
-    fun `captures create update and delete revisions for user caseload member`() {
-      val account = dataBuilder.generalUser()
-        .username("AUDIT_MEMBER")
-        .atPrison("LEI")
-        .buildAndSave()
-      val memberId = UserCaseloadMemberId(username = account.username, caseloadId = "LEI")
-      val createdTimestamp = LocalDateTime.of(2026, 2, 1, 8, 0)
-      val expiryDate = LocalDate.of(2026, 12, 31)
+  private fun managedUser(entityManager: EntityManager, userId: UUID): User =
+    entityManager.find(User::class.java, userId)
 
-      withTransaction { entityManager ->
-        val managedAccount = entityManager.find(UserAccount::class.java, account.username)
-        val managedCaseload = entityManager.find(uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload::class.java, "LEI")
+  private fun managedUserAccount(entityManager: EntityManager, username: String): UserAccount =
+    entityManager.find(UserAccount::class.java, username)
 
-        entityManager.persist(
-          UserCaseloadMember(
-            id = memberId,
-            caseload = managedCaseload,
-            userAccount = managedAccount,
-            startDate = LocalDate.of(2026, 2, 1),
-            active = true,
-            createdBy = "TEST",
-            createdTimestamp = createdTimestamp,
-          ),
-        )
-      }
+  private fun managedCaseload(entityManager: EntityManager, caseloadId: String): Caseload =
+    entityManager.find(Caseload::class.java, caseloadId)
 
-      withTransaction { entityManager ->
-        val managedMember = entityManager.find(UserCaseloadMember::class.java, memberId)
-        entityManager.merge(
-          managedMember.copy(
-            expiryDate = expiryDate,
-            active = false,
-            modifiedBy = "TEST",
-            modifiedTimestamp = LocalDateTime.of(2026, 2, 10, 8, 0),
-          ),
-        )
-      }
-
-      withTransaction { entityManager ->
-        entityManager.remove(entityManager.find(UserCaseloadMember::class.java, memberId))
-      }
-
-      val revisions = auditRevisions(UserCaseloadMember::class.java, memberId)
-
-      assertRevisionTypes(revisions)
-      assertThat(revisions.map { it.entity.startDate }).containsExactly(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 1))
-      assertThat(revisions.map { it.entity.active }).containsExactly(true, false, false)
-      assertThat(revisions.map { it.entity.expiryDate }).containsExactly(null, expiryDate, expiryDate)
-    }
+  private fun <T : Any, ID : Any> saveUpdateDelete(
+    entity: T,
+    update: T.() -> T,
+    save: (T) -> T,
+    delete: (T) -> Unit,
+    entityClass: Class<T>,
+    auditId: ID,
+  ): List<AuditRevision<T>> {
+    val updatedEntity = save(entity.update())
+    delete(updatedEntity)
+    return auditRevisions(entityClass, auditId).also(::assertRevisionTypes)
   }
 
-  @Nested
-  inner class UserCaseloadAdministratorAuditing {
-
-    @Test
-    fun `captures create update and delete revisions for user caseload administrator`() {
-      val account = dataBuilder.generalUser()
-        .username("AUDIT_ADMIN")
-        .atPrison("WWI")
-        .buildAndSave()
-      val administratorId = UserCaseloadAdministratorId(username = account.username, caseloadId = "WWI")
-      val expiryDate = LocalDate.of(2026, 11, 30)
-
-      withTransaction { entityManager ->
-        val managedAccount = entityManager.find(UserAccount::class.java, account.username)
-        val managedCaseload = entityManager.find(uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload::class.java, "WWI")
-
-        entityManager.persist(
-          UserCaseloadAdministrator(
-            id = administratorId,
-            caseload = managedCaseload,
-            userAccount = managedAccount,
-            active = true,
-            createdBy = "TEST",
-            createdTimestamp = LocalDateTime.of(2026, 3, 1, 8, 0),
-          ),
-        )
-      }
-
-      withTransaction { entityManager ->
-        val managedAdministrator = entityManager.find(UserCaseloadAdministrator::class.java, administratorId)
-        entityManager.merge(
-          managedAdministrator.copy(
-            active = false,
-            expiryDate = expiryDate,
-            modifiedBy = "TEST",
-            modifiedTimestamp = LocalDateTime.of(2026, 3, 5, 8, 0),
-          ),
-        )
-      }
-
-      withTransaction { entityManager ->
-        entityManager.remove(entityManager.find(UserCaseloadAdministrator::class.java, administratorId))
-      }
-
-      val revisions = auditRevisions(UserCaseloadAdministrator::class.java, administratorId)
-
-      assertRevisionTypes(revisions)
-      assertThat(revisions.map { it.entity.active }).containsExactly(true, false, false)
-      assertThat(revisions.map { it.entity.expiryDate }).containsExactly(null, expiryDate, expiryDate)
-      assertThat(revisions.map { it.entity.createdBy }).containsExactly("TEST", "TEST", "TEST")
-    }
+  private fun <T : Any, ID : Any> persistUpdateDelete(
+    create: (EntityManager) -> ID,
+    update: (EntityManager) -> T,
+    delete: (EntityManager) -> Unit,
+    entityClass: Class<T>,
+  ): List<AuditRevision<T>> {
+    val auditId = withTransaction(create)
+    withTransaction(update)
+    withTransaction(delete)
+    return auditRevisions(entityClass, auditId).also(::assertRevisionTypes)
   }
 
   private fun <T : Any, ID : Any> auditRevisions(entityClass: Class<T>, id: ID): List<AuditRevision<T>> = entityManagerFactory.createEntityManager().use { entityManager ->

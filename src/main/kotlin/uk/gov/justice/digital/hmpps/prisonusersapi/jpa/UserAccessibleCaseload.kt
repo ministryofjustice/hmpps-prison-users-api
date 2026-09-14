@@ -8,12 +8,15 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.Table
+import org.hibernate.Hibernate
+import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import java.io.Serializable
 import java.time.LocalDateTime
 
 @Entity
 @Table(name = "user_accessible_caseloads")
+@Audited
 data class UserAccessibleCaseload(
 
   @EmbeddedId
@@ -33,7 +36,18 @@ data class UserAccessibleCaseload(
 
   val createdBy: String,
   val createdTimestamp: LocalDateTime,
-)
+) {
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+    other as UserAccessibleCaseload
+
+    return id == other.id
+  }
+
+  override fun hashCode(): Int = id.hashCode()
+}
 
 @Embeddable
 data class UserAccessibleCaseloadId(

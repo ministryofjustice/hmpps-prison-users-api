@@ -10,11 +10,14 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.SequenceGenerator
 import jakarta.persistence.Table
+import org.hibernate.Hibernate
+import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import java.time.LocalDateTime
 
 @Entity
 @Table(name = "user_emails")
+@Audited
 data class UserEmail(
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_email_id_seq")
@@ -34,4 +37,15 @@ data class UserEmail(
   @JoinColumn(name = "user_id")
   @NotAudited
   val user: User,
-)
+) {
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+    other as UserEmail
+
+    return id != null && id == other.id
+  }
+
+  override fun hashCode(): Int = id?.hashCode() ?: 0
+}
