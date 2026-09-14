@@ -14,9 +14,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilde
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.defaultUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.Caseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministratorId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMember
@@ -335,20 +335,16 @@ class EnversIntTest : IntegrationTestBase() {
     }
   }
 
-  private fun createGeneralAccount(username: String, caseloadId: String): UserAccount =
-    dataBuilder.generalUser()
-      .username(username)
-      .atPrison(caseloadId)
-      .buildAndSave()
+  private fun createGeneralAccount(username: String, caseloadId: String): UserAccount = dataBuilder.generalUser()
+    .username(username)
+    .atPrison(caseloadId)
+    .buildAndSave()
 
-  private fun managedUser(entityManager: EntityManager, userId: UUID): User =
-    entityManager.find(User::class.java, userId)
+  private fun managedUser(entityManager: EntityManager, userId: UUID): User = entityManager.find(User::class.java, userId)
 
-  private fun managedUserAccount(entityManager: EntityManager, username: String): UserAccount =
-    entityManager.find(UserAccount::class.java, username)
+  private fun managedUserAccount(entityManager: EntityManager, username: String): UserAccount = entityManager.find(UserAccount::class.java, username)
 
-  private fun managedCaseload(entityManager: EntityManager, caseloadId: String): Caseload =
-    entityManager.find(Caseload::class.java, caseloadId)
+  private fun managedCaseload(entityManager: EntityManager, caseloadId: String): Caseload = entityManager.find(Caseload::class.java, caseloadId)
 
   private fun <T : Any, ID : Any> saveUpdateDelete(
     entity: T,
