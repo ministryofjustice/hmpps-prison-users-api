@@ -9,12 +9,15 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import org.hibernate.annotations.UuidGenerator
+import org.hibernate.envers.Audited
+import org.hibernate.envers.NotAudited
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
 @Table(name = "users")
+@Audited
 data class User(
 
   @Id
@@ -30,6 +33,7 @@ data class User(
     cascade = [CascadeType.ALL],
     orphanRemoval = true,
   )
+  @NotAudited
   val userEmails: MutableList<UserEmail> = mutableListOf(),
 
   val firstName: String,

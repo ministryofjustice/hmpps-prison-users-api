@@ -15,6 +15,8 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
+import org.hibernate.envers.Audited
+import org.hibernate.envers.NotAudited
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import java.time.LocalDateTime
@@ -69,6 +71,7 @@ import java.time.LocalDateTime
     NamedAttributeNode("userRoleCodes"),
   ],
 )
+@Audited
 data class UserAccount(
 
   @Id
@@ -77,6 +80,7 @@ data class UserAccount(
 
   @OneToOne
   @JoinColumn(name = "user_id")
+  @NotAudited
   val user: User,
 
   @Enumerated(EnumType.STRING)
@@ -87,12 +91,15 @@ data class UserAccount(
 
   @OneToOne(optional = true)
   @JoinColumn(name = "active_caseload_id")
+  @NotAudited
   val activeCaseload: Caseload? = null,
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
+  @NotAudited
   val userAccessibleCaseloads: MutableList<UserAccessibleCaseload> = mutableListOf(),
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
+  @NotAudited
   val userRoleCodes: MutableList<UserRole> = mutableListOf(),
 
   val createdTimestamp: LocalDateTime,

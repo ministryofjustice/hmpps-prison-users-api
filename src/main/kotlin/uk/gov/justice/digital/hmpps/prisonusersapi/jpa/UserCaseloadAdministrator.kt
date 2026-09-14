@@ -8,14 +8,25 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.Table
+import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import java.io.Serializable
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_roles")
-data class UserRole(
+@Table(name = "user_caseload_administrators")
+@Audited
+data class UserCaseloadAdministrator(
+
   @EmbeddedId
-  val id: UserRoleId,
+  val id: UserCaseloadAdministratorId,
+
+  @ManyToOne
+  @MapsId("caseloadId")
+  @JoinColumn(name = "caseload_id")
+  @NotAudited
+  val caseload: Caseload,
 
   @ManyToOne
   @MapsId("username")
@@ -23,15 +34,19 @@ data class UserRole(
   @NotAudited
   val userAccount: UserAccount,
 
+  val active: Boolean? = null,
+  val expiryDate: LocalDate? = null,
   val createdBy: String,
-  val createdTimestamp: java.time.LocalDateTime,
+  val createdTimestamp: LocalDateTime,
+  val modifiedBy: String? = null,
+  val modifiedTimestamp: LocalDateTime? = null,
 )
 
 @Embeddable
-data class UserRoleId(
+data class UserCaseloadAdministratorId(
   @Column(name = "username")
   val username: String,
 
-  @Column(name = "role_code")
-  val roleCode: String,
+  @Column(name = "caseload_id")
+  val caseloadId: String,
 ) : Serializable

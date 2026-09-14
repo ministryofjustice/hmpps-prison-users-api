@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.Table
+import org.hibernate.envers.NotAudited
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -21,11 +22,13 @@ data class UserAccessibleCaseload(
   @ManyToOne
   @MapsId("caseloadId")
   @JoinColumn(name = "caseload_id")
+  @NotAudited
   val caseload: Caseload,
 
   @ManyToOne
   @MapsId("username")
   @JoinColumn(name = "username")
+  @NotAudited
   val userAccount: UserAccount,
 
   val createdBy: String,

@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.SequenceGenerator
 import jakarta.persistence.Table
+import org.hibernate.envers.NotAudited
 import java.time.LocalDateTime
 
 @Entity
@@ -31,5 +32,6 @@ data class UserEmail(
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
+  @NotAudited
   val user: User,
 )
