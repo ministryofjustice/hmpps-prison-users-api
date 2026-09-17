@@ -12,15 +12,16 @@ import org.hibernate.Hibernate
 import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import java.io.Serializable
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_accessible_caseloads")
+@Table(name = "user_caseload_members")
 @Audited
-data class UserAccessibleCaseload(
+data class UserCaseloadMember(
 
   @EmbeddedId
-  val id: UserAccessibleCaseloadId,
+  val id: UserCaseloadMemberId,
 
   @ManyToOne
   @MapsId("caseloadId")
@@ -34,14 +35,19 @@ data class UserAccessibleCaseload(
   @NotAudited
   val userAccount: UserAccount,
 
+  val startDate: LocalDate? = null,
+  val expiryDate: LocalDate? = null,
+  val active: Boolean? = null,
   val createdBy: String,
   val createdTimestamp: LocalDateTime,
+  val modifiedBy: String? = null,
+  val modifiedTimestamp: LocalDateTime? = null,
 ) {
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
-    other as UserAccessibleCaseload
+    other as UserCaseloadMember
 
     return id == other.id
   }
@@ -50,7 +56,7 @@ data class UserAccessibleCaseload(
 }
 
 @Embeddable
-data class UserAccessibleCaseloadId(
+data class UserCaseloadMemberId(
   @Column(name = "username")
   val username: String,
 

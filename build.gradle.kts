@@ -16,6 +16,7 @@ dependencies {
   implementation("org.flywaydb:flyway-core")
   implementation("org.apache.commons:commons-text:1.15.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+  implementation("org.hibernate.orm:hibernate-envers")
 
   runtimeOnly("com.h2database:h2:2.5.250")
   runtimeOnly("org.postgresql:postgresql:42.7.13")
