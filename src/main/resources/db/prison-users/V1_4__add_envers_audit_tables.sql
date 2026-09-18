@@ -3,7 +3,7 @@
 
 -- Create REVINFO table (Envers uses this for revision tracking)
 CREATE TABLE revinfo (
-    rev BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    rev BIGSERIAL PRIMARY KEY,
     revtstmp BIGINT NOT NULL
 );
 
@@ -140,11 +140,3 @@ CREATE TABLE user_caseload_members_audit (
 CREATE INDEX ix_user_caseload_members_audit_rev ON user_caseload_members_audit(rev);
 CREATE INDEX ix_user_caseload_members_audit_username ON user_caseload_members_audit(username);
 CREATE INDEX ix_user_caseload_members_audit_caseload_id ON user_caseload_members_audit(caseload_id);
-
-CREATE SEQUENCE IF NOT EXISTS revinfo_seq START WITH 1 INCREMENT BY 50;
-
-
-
-
-
-
