@@ -141,6 +141,8 @@ CREATE INDEX ix_user_caseload_members_audit_rev ON user_caseload_members_audit(r
 CREATE INDEX ix_user_caseload_members_audit_username ON user_caseload_members_audit(username);
 CREATE INDEX ix_user_caseload_members_audit_caseload_id ON user_caseload_members_audit(caseload_id);
 
+CREATE SEQUENCE IF NOT EXISTS revinfo_seq START WITH 1 INCREMENT BY 50;
+
 
 
 
