@@ -24,4 +24,3 @@ class AuditRevisionEntity(
   @Column(name = "revtstmp", nullable = false)
   var timestamp: Long? = null,
 )
-
