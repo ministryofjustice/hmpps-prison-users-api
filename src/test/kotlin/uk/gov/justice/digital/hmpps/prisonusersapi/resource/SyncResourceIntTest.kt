@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDateTime
 
@@ -33,6 +34,9 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var userAccountRepository: UserAccountRepository
+
+  @Autowired
+  private lateinit var usersRepository: UsersRepository
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
@@ -845,6 +849,70 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .jsonPath("userMessage").value<String> { msg ->
           assert(msg.contains("DOES_NOT_EXIST")) { "Expected message to mention the missing caseload but was: $msg" }
         }
+    }
+  }
+
+  @DisplayName("DELETE /sync/user/{legacyStaffId}")
+  @Nested
+  inner class DeletePrisonUserForSync {
+
+    private val legacyStaffId = 222222L
+
+    @BeforeEach
+    internal fun createUser() {
+      syncService.syncUser(legacyStaffId, minimalSyncRequest())
+    }
+
+    @AfterEach
+    internal fun deleteUsers() = dataBuilder.deleteAll()
+
+    @Test
+    fun `access unauthorized when no authority`() {
+      webTestClient.delete().uri("/sync/user/$legacyStaffId")
+        .exchange()
+        .expectStatus().isUnauthorized
+    }
+
+    @Test
+    fun `access forbidden when no role`() {
+      webTestClient.delete().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf()))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `access forbidden with wrong role`() {
+      webTestClient.delete().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `deletes user and all linked data`() {
+      webTestClient.delete().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .exchange()
+        .expectStatus().isNoContent
+
+      assertFalse(usersRepository.existsUsersByLegacyStaffId(legacyStaffId))
+      assertFalse(userAccountRepository.existsByUsername("SYNC_USER"))
+      assertFalse(userAccountRepository.existsByUsername("SYNC_USER_ADMIN"))
+
+      webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage").isEqualTo("User not found: User with legacy staff id $legacyStaffId not found")
+
+      webTestClient.delete().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("userMessage").isEqualTo("User not found: User with legacy staff id $legacyStaffId not found")
     }
   }
 

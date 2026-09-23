@@ -60,6 +60,27 @@ class SyncService(
     }
   }
 
+  fun deleteUser(legacyStaffId: Long) {
+    val startedAtMs = System.currentTimeMillis()
+
+    while (true) {
+      try {
+        transactionTemplate.execute {
+          deleteUserInTransaction(legacyStaffId)
+        }
+        return
+      } catch (e: SyncLockBusyException) {
+        if (System.currentTimeMillis() - startedAtMs >= lockMaxWaitMs) {
+          throw SyncLockAcquisitionTimeoutException(
+            "Timed out after ${lockMaxWaitMs}ms waiting to acquire sync lock for legacy staff id $legacyStaffId",
+            e,
+          )
+        }
+        pauseFor(legacyStaffId)
+      }
+    }
+  }
+
   private fun pauseFor(legacyStaffId: Long) {
     try {
       Thread.sleep(lockRetryBackoffMs)
@@ -205,6 +226,32 @@ class SyncService(
         }
       }
       return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
+    } finally {
+      // Release the lock by deleting the row before transaction completes.
+      syncLockRepository.deleteById(legacyStaffId)
+    }
+  }
+
+  private fun deleteUserInTransaction(legacyStaffId: Long) {
+    try {
+      // Serialize delete operations by holding a lock row for the duration of this transaction.
+      try {
+        syncLockRepository.saveAndFlush(
+          SyncLock(
+            legacyStaffId = legacyStaffId,
+            lockedAt = java.time.LocalDateTime.now(),
+            lockedBy = Thread.currentThread().name,
+          ),
+        )
+      } catch (e: DataIntegrityViolationException) {
+        throw SyncLockBusyException("Sync lock is already held for legacy staff id $legacyStaffId", e)
+      }
+
+      val user = usersRepository.findByLegacyStaffId(legacyStaffId)
+        .orElseThrow { UserNotFoundException("User with legacy staff id $legacyStaffId not found") }
+
+      usersRepository.delete(user)
+      usersRepository.flush()
     } finally {
       // Release the lock by deleting the row before transaction completes.
       syncLockRepository.deleteById(legacyStaffId)
