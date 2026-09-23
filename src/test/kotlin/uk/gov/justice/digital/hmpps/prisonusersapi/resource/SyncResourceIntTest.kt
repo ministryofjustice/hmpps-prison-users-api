@@ -19,8 +19,11 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserEmailsRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDateTime
 
@@ -37,6 +40,15 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var usersRepository: UsersRepository
+
+  @Autowired
+  private lateinit var userAccessibleCaseloadRepository: UserAccessibleCaseloadRepository
+
+  @Autowired
+  private lateinit var userEmailsRepository: UserEmailsRepository
+
+  @Autowired
+  private lateinit var userRoleRepository: UserRoleRepository
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
@@ -860,7 +872,24 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
     @BeforeEach
     internal fun createUser() {
-      syncService.syncUser(legacyStaffId, minimalSyncRequest())
+      syncService.syncUser(
+        legacyStaffId,
+        minimalSyncRequest(
+          accounts = listOf(
+            syncAccount(
+              username = "SYNC_USER",
+              activeCaseloadId = "LEI",
+              caseloads = listOf(syncCaseload("LEI"), syncCaseload("MDI")),
+              roles = listOf(syncRole("ROLE_DELETE_ME")),
+            ),
+            syncAccount(
+              username = "SYNC_USER_ADMIN",
+              activeCaseloadId = "MDI",
+              caseloads = listOf(syncCaseload("MDI")),
+            ),
+          ),
+        ),
+      )
     }
 
     @AfterEach
@@ -899,6 +928,9 @@ class SyncResourceIntTest : IntegrationTestBase() {
       assertFalse(usersRepository.existsUsersByLegacyStaffId(legacyStaffId))
       assertFalse(userAccountRepository.existsByUsername("SYNC_USER"))
       assertFalse(userAccountRepository.existsByUsername("SYNC_USER_ADMIN"))
+      assertTrue(userAccessibleCaseloadRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
+      assertTrue(userRoleRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
+      assertTrue(userEmailsRepository.findAllByUserLegacyStaffId(legacyStaffId).isEmpty())
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
         .headers(setAuthorisation(roles = listOf(RECONCILIATION_ROLE)))

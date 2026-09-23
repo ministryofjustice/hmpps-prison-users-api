@@ -5,4 +5,6 @@ import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 
 @Repository
-interface UserEmailsRepository : JpaRepository<UserEmail, Long>
+interface UserEmailsRepository : JpaRepository<UserEmail, Long> {
+  fun findAllByUserLegacyStaffId(legacyStaffId: Long): List<UserEmail>
+}

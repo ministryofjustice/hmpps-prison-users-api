@@ -7,5 +7,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 
 @Repository
 interface UserAccessibleCaseloadRepository : JpaRepository<UserAccessibleCaseload, UserAccessibleCaseloadId> {
+  fun findAllByIdUsernameIn(usernames: Collection<String>): List<UserAccessibleCaseload>
   fun deleteAllByIdUsername(username: String)
 }
