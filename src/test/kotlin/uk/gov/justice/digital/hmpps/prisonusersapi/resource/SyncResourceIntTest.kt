@@ -21,9 +21,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBa
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserEmailsRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDateTime
 
