@@ -7,6 +7,7 @@
 
 ## Architecture and data model
 - `UserAccount` is the main lookup root for read APIs; it links to `User`, `activeCaseload`, and `userAccessibleCaseloads` (`jpa/UserAccount.kt`).
+- `UserCaseloadAdministrator` and `UserCaseloadMember` are separate composite-key JPA entities for caseload admin/member rows; both are `@Audited`, so keep their fields aligned with the base tables in `V1_0__create_tables.sql` and the audit tables in `V1_4__add_envers_audit_tables.sql` when changing either side.
 - Read endpoints currently expose:
   - `GET /users/basic/{username}` in `resource/UserResource.kt`
   - `POST /users/basic/find-by-usernames` in `resource/UserResource.kt`
@@ -21,6 +22,7 @@
 ## Local run / build / test
 - **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.8. `hmpps-kotlin-spring-boot-starter` is 3.0.1, with `hmpps-kotlin-spring-boot-starter-test` at 3.0.1. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.1.1; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.46.
 - Build the jar: `./gradlew clean assemble`
+- Build the Docker image locally by assembling first, copying `build/libs/*.jar` into the repository root, then running `docker build --build-arg GIT_REF=... --build-arg GIT_BRANCH=... --build-arg BUILD_NUMBER=... .`; the container expects `HMPPS_AUTH_URL` when started.
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
 - Run only auth, then start the app from IntelliJ with profile `dev`: `docker compose pull && docker compose up --scale hmpps-prison-users-api=0`
 - For a real local Postgres instead of in-memory H2, start `docker-compose-test.yml` and run with profile `local-postgres` (DB is on `localhost:5434`, credentials are in `src/main/resources/application-local-postgres.yml`).
@@ -31,6 +33,8 @@
 - OpenAPI annotations are kept directly on controller methods and DTOs (`resource/*.kt`, `data/UserMigrationRequest.kt`). Swagger/OpenAPI is enabled in `dev` and `test`, disabled in base `application.yml`.
 - Error responses are centralized in `config/PrisonUsersApiExceptionHandler.kt`; prefer throwing the named service exceptions already used there (e.g., `UserNotFoundException`, `CaseloadNotFoundException`, `ActiveCaseloadNotInUserAccessibleCaseloadsException`, `SyncLockAcquisitionTimeoutException`) rather than returning ad hoc `ResponseEntity` errors. These map to specific HTTP status codes: 404 for not found, 409 for conflicts/lock timeouts, 400 for validation/state violations.
 - Mapping logic belongs in `service/converters/`, not controllers. Example: `FromUserAccount.kt` title-cases names and strips DPS caseloads when `removeDpsCaseload = true`. For endpoints returning detailed response objects (e.g., `PrisonUserReconciliationResponse`), converters are extension functions on domain entities (e.g., `User.toPrisonUserReconciliationResponse()` in `FromUser.kt`). Email selection during sync is delegated to `PrimaryEmailDetector.getPrimaryEmail()`, which prioritizes `@justice.gov.uk` addresses.
+- Prison/caseload name formatting goes through `service/converters/PrisonNameFormat.kt` (`capitalizeLeavingAbbreviations()`), which keeps abbreviations such as `HMP`, `YOI`, and `VCC` uppercase when title-casing names.
+- `AccountStatusConverter` in `jpa/` is `@Converter(autoApply = true)` and persists `AccountStatus.desc`; keep enum descriptions aligned with the stored database values.
 - Reads are explicitly `@Transactional(readOnly = true)` in services (`service/UserService.kt`, `service/ReconciliationService.kt`); writes keep the transaction at service level using `TransactionTemplate` for fine-grained control (e.g., `SyncService.kt`).
 - JPA entity graphs control loading and are declared as `@NamedEntityGraph` annotations (`jpa/UserAccount.kt`). Multiple graphs exist for different access patterns:
   - `UserAccount.withCaseloads`: used by `UserAccountRepository.findAllByUserUserId()` for full caseload details

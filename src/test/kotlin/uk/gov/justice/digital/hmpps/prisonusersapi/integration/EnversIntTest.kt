@@ -85,6 +85,50 @@ class EnversIntTest : IntegrationTestBase() {
         assertThat(revisions.map { it.entity.lastName }).containsExactly("User", "User", "User")
         assertThat(revisions.map { it.entity.legacyStaffId }).containsExactly(900001L, 900001L, 900001L)
       }
+
+      @Test
+      fun `captures delete revisions for linked user emails when user is deleted`() {
+        val createdUser = defaultUser().copy(
+          legacyStaffId = 900002L,
+          firstName = "Created",
+          lastName = "User",
+          userEmails = mutableListOf(),
+        ).also { user ->
+          user.addUserEmail(
+            UserEmail(
+              email = "audit.user.one@example.org",
+              isPrimary = true,
+              createdBy = "TEST",
+              createdTimestamp = LocalDateTime.of(2026, 7, 1, 8, 0),
+              user = user,
+            ),
+          )
+          user.addUserEmail(
+            UserEmail(
+              email = "audit.user.two@example.org",
+              isPrimary = false,
+              createdBy = "TEST",
+              createdTimestamp = LocalDateTime.of(2026, 7, 1, 8, 5),
+              user = user,
+            ),
+          )
+        }
+
+        val savedUser = usersRepository.saveAndFlush(createdUser)
+        val emailIds = savedUser.userEmails.map { requireNotNull(it.id) }
+
+        usersRepository.delete(savedUser)
+        usersRepository.flush()
+
+        val expectedEmails = listOf("audit.user.one@example.org", "audit.user.two@example.org")
+        emailIds.zip(expectedEmails).forEach { (emailId, expectedEmail) ->
+          val revisions = auditRevisions(UserEmail::class.java, emailId)
+
+          assertThat(revisions.map { it.revisionType }).containsExactly(RevisionType.ADD, RevisionType.DEL)
+          assertThat(revisions.map { it.entity.email }).containsExactly(expectedEmail, expectedEmail)
+          assertThat(revisions.map { it.entity.isPrimary }).containsExactly(expectedEmail == "audit.user.one@example.org", expectedEmail == "audit.user.one@example.org")
+        }
+      }
     }
 
     @Nested

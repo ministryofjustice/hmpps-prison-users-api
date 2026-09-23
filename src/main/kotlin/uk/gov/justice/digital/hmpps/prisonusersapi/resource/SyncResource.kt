@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -72,5 +73,42 @@ class SyncResource(
   ): ResponseEntity<PrisonUserSyncResponse> {
     val response = syncService.syncUser(legacyStaffId, request)
     return ResponseEntity.ok(response)
+  }
+
+  @PreAuthorize("hasRole('ROLE_PRISON_USERS_API__SYNC__RW')")
+  @DeleteMapping("/user/{legacyStaffId}")
+  @Operation(
+    summary = "Delete a Prison User and all linked data",
+    description = "Deletes a Prison User by the legacy staffId, including linked accounts, roles, emails, and caseload links. Requires role ROLE_PRISON_USERS_API__SYNC__RW",
+    security = [SecurityRequirement(name = "ROLE_PRISON_USERS_API__SYNC__RW")],
+    responses = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Prison User delete successful.",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "User not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun deletePrisonUserForSync(
+    @Schema(description = "The legacy NOMIS staff Id", example = "123456", required = true)
+    @PathVariable
+    legacyStaffId: Long,
+  ): ResponseEntity<Void> {
+    syncService.deleteUser(legacyStaffId)
+    return ResponseEntity.noContent().build()
   }
 }
