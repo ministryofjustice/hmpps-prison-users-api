@@ -70,4 +70,3 @@ fun SyncUserCaseloadMember.toUserCaseloadMember(userAccount: UserAccount, caselo
   modifiedBy = modifiedBy,
   modifiedTimestamp = modifiedTimestamp,
 )
-

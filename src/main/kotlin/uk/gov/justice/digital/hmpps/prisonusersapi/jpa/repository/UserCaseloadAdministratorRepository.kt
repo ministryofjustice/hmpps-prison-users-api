@@ -10,4 +10,3 @@ interface UserCaseloadAdministratorRepository : JpaRepository<UserCaseloadAdmini
   fun findAllByIdUsernameIn(usernames: Collection<String>): List<UserCaseloadAdministrator>
   fun deleteAllByIdUsernameIn(usernames: Collection<String>)
 }
-
