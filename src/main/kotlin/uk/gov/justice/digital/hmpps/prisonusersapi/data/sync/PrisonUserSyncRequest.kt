@@ -6,6 +6,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.EmailHolder
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Collections.emptyList
 
@@ -70,6 +71,11 @@ data class PrisonUserSyncRequest(
   @Schema(description = "The list of accounts associated with the user")
   val accounts: List<SyncPrisonUserAccount> = emptyList(),
 
+  @Schema(description = "The list of administration caseloads associated with the user")
+  val administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
+
+  @Schema(description = "The list of member caseloads associated with the user")
+  val memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -246,4 +252,149 @@ data class SyncPrisonUserCaseload(
     example = "TEST_USER",
   )
   val createdBy: String,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "Caseload assigned to a user account to administer", type = "object")
+data class SyncUserCaseloadAdministrator(
+  @Schema(
+    required = true,
+    description = "Username for the user account",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val username: String,
+
+  @Schema(
+    required = true,
+    description = "Identifier for the caseload the user account can access",
+    type = "string",
+    example = "MRI",
+  )
+  val caseloadId: String,
+
+  @Schema(
+    required = true,
+    description = "Indicates that the user is active",
+    example = "true",
+  )
+  val active: Boolean,
+
+  @Schema(
+    required = true,
+    description = "Record expiry date",
+    type = "string",
+    format = "date",
+    example = "2022-01-01",
+  )
+  val expiryDate: LocalDate,
+
+  @Schema(
+    required = true,
+    description = "Record creation timestamp",
+    type = "string",
+    format = "date-time",
+    example = "2022-01-01T12:00:00",
+  )
+  val createdTimestamp: LocalDateTime,
+
+  @Schema(
+    required = true,
+    description = "Username of the record creator",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val createdBy: String,
+
+  @Schema(
+    description = "Record modification timestamp",
+    type = "string",
+    format = "date-time",
+    example = "2022-01-01T12:00:00",
+  )
+  val modifiedTimestamp: LocalDateTime? = null,
+
+  @Schema(
+    description = "Username of the record modifier",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val modifiedBy: String? = null,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "Caseload assigned to a user account", type = "object")
+data class SyncUserCaseloadMember(
+  @Schema(
+    required = true,
+    description = "Username for the user account",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val username: String,
+
+  @Schema(
+    required = true,
+    description = "Identifier for the caseload the user account can access",
+    type = "string",
+    example = "MRI",
+  )
+  val caseloadId: String,
+
+  @Schema(
+    required = true,
+    description = "Indicates that the user is active",
+    example = "true",
+  )
+  val active: Boolean,
+
+  @Schema(
+    required = true,
+    description = "Record start date",
+    type = "string",
+    format = "date",
+    example = "2022-01-01",
+  )
+  val startDate: LocalDate,
+
+  @Schema(
+    required = true,
+    description = "Record expiry date",
+    type = "string",
+    format = "date",
+    example = "2022-01-01",
+  )
+  val expiryDate: LocalDate,
+
+  @Schema(
+    required = true,
+    description = "Record creation timestamp",
+    type = "string",
+    format = "date-time",
+    example = "2022-01-01T12:00:00",
+  )
+  val createdTimestamp: LocalDateTime,
+
+  @Schema(
+    required = true,
+    description = "Username of the record creator",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val createdBy: String,
+
+  @Schema(
+    description = "Record modification timestamp",
+    type = "string",
+    format = "date-time",
+    example = "2022-01-01T12:00:00",
+  )
+  val modifiedTimestamp: LocalDateTime? = null,
+
+  @Schema(
+    description = "Username of the record modifier",
+    type = "string",
+    example = "TEST_USER",
+  )
+  val modifiedBy: String? = null,
 )
