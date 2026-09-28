@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -17,14 +18,19 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserAccou
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadAdministrator
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserEmailsRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 private const val SYNC_ROLE = "ROLE_PRISON_USERS_API__SYNC__RW"
@@ -49,6 +55,12 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var userRoleRepository: UserRoleRepository
+
+  @Autowired
+  private lateinit var userCaseloadAdministratorRepository: UserCaseloadAdministratorRepository
+
+  @Autowired
+  private lateinit var userCaseloadMemberRepository: UserCaseloadMemberRepository
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
@@ -90,6 +102,23 @@ class SyncResourceIntTest : IntegrationTestBase() {
               activeCaseloadId = "MDI",
               caseloads = listOf(syncPrisonUserCaseload("MDI")),
               roles = listOf(syncPrisonUserRole(roleCode = "ROLE_ADMIN_OLD")),
+            ),
+          ),
+          administrationCaseloads = listOf(
+            syncPrisonUserAdministrationCaseload(
+              username = "SYNC_USER_ADMIN",
+              caseloadId = "MDI",
+              active = true,
+              expiryDate = LocalDate.of(2025, 1, 31),
+            ),
+          ),
+          memberCaseloads = listOf(
+            syncPrisonUserMemberCaseload(
+              username = "SYNC_USER",
+              caseloadId = "LEI",
+              active = true,
+              startDate = LocalDate.of(2024, 1, 1),
+              expiryDate = LocalDate.of(2025, 1, 31),
             ),
           ),
         ),
@@ -154,6 +183,23 @@ class SyncResourceIntTest : IntegrationTestBase() {
                   caseloads = listOf(syncCaseload("MDI")),
                 ),
               ),
+              administrationCaseloads = listOf(
+                syncAdministrationCaseload(
+                  username = "NEW_SYNC_USER_ADMIN",
+                  caseloadId = "MDI",
+                  active = true,
+                  expiryDate = LocalDate.of(2026, 1, 31),
+                ),
+              ),
+              memberCaseloads = listOf(
+                syncMemberCaseload(
+                  username = "NEW_SYNC_USER",
+                  caseloadId = "LEI",
+                  active = true,
+                  startDate = LocalDate.of(2024, 1, 1),
+                  expiryDate = LocalDate.of(2026, 1, 31),
+                ),
+              ),
             ),
           ),
         )
@@ -182,6 +228,21 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .jsonPath("accounts[1].username").isEqualTo("NEW_SYNC_USER_ADMIN")
         .jsonPath("accounts[1].caseloads.length()").isEqualTo(1)
         .jsonPath("accounts[1].caseloads[0].caseloadId").isEqualTo("MDI")
+
+      val createdAdministrators = userCaseloadAdministratorRepository.findAllByIdUsernameIn(listOf("NEW_SYNC_USER", "NEW_SYNC_USER_ADMIN"))
+      assertThat(createdAdministrators).hasSize(1)
+      assertThat(createdAdministrators.single().id.username).isEqualTo("NEW_SYNC_USER_ADMIN")
+      assertThat(createdAdministrators.single().id.caseloadId).isEqualTo("MDI")
+      assertThat(createdAdministrators.single().active).isTrue()
+      assertThat(createdAdministrators.single().expiryDate).isEqualTo(LocalDate.of(2026, 1, 31))
+
+      val createdMembers = userCaseloadMemberRepository.findAllByIdUsernameIn(listOf("NEW_SYNC_USER", "NEW_SYNC_USER_ADMIN"))
+      assertThat(createdMembers).hasSize(1)
+      assertThat(createdMembers.single().id.username).isEqualTo("NEW_SYNC_USER")
+      assertThat(createdMembers.single().id.caseloadId).isEqualTo("LEI")
+      assertThat(createdMembers.single().active).isTrue()
+      assertThat(createdMembers.single().startDate).isEqualTo(LocalDate.of(2024, 1, 1))
+      assertThat(createdMembers.single().expiryDate).isEqualTo(LocalDate.of(2026, 1, 31))
     }
 
     // ── Validation failures ──────────────────────────────────────────────────
@@ -751,6 +812,75 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .jsonPath("accounts[0].caseloads[0].caseloadId").isEqualTo("WWI")
     }
 
+    @Test
+    fun `replaces administration and member caseload collections`() {
+      webTestClient.put().uri("/sync/user/$legacyStaffId")
+        .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+        .body(
+          BodyInserters.fromValue(
+            minimalSyncRequest(
+              accounts = listOf(
+                syncAccount(
+                  username = "SYNC_USER",
+                  activeCaseloadId = "WWI",
+                  caseloads = listOf(syncCaseload("WWI")),
+                ),
+                syncAccount(
+                  username = "SYNC_USER_ADMIN",
+                  activeCaseloadId = "LEI",
+                  caseloads = listOf(syncCaseload("LEI")),
+                ),
+              ),
+              administrationCaseloads = listOf(
+                syncAdministrationCaseload(
+                  username = "SYNC_USER_ADMIN",
+                  caseloadId = "LEI",
+                  active = false,
+                  expiryDate = LocalDate.of(2026, 2, 28),
+                  modifiedTimestamp = modifiedAt,
+                  modifiedBy = "SYNC_TEST",
+                ),
+              ),
+              memberCaseloads = listOf(
+                syncMemberCaseload(
+                  username = "SYNC_USER",
+                  caseloadId = "WWI",
+                  active = false,
+                  startDate = LocalDate.of(2024, 6, 1),
+                  expiryDate = LocalDate.of(2026, 2, 28),
+                  modifiedTimestamp = modifiedAt,
+                  modifiedBy = "SYNC_TEST",
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.userId").isNotEmpty
+        .jsonPath("$.staffId").isEqualTo(legacyStaffId)
+
+      val administrators = userCaseloadAdministratorRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN"))
+      assertThat(administrators).hasSize(1)
+      assertThat(administrators.single().id.username).isEqualTo("SYNC_USER_ADMIN")
+      assertThat(administrators.single().id.caseloadId).isEqualTo("LEI")
+      assertThat(administrators.single().active).isFalse()
+      assertThat(administrators.single().expiryDate).isEqualTo(LocalDate.of(2026, 2, 28))
+      assertThat(administrators.single().modifiedBy).isEqualTo("SYNC_TEST")
+      assertThat(administrators.single().modifiedTimestamp).isEqualTo(modifiedAt)
+
+      val members = userCaseloadMemberRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN"))
+      assertThat(members).hasSize(1)
+      assertThat(members.single().id.username).isEqualTo("SYNC_USER")
+      assertThat(members.single().id.caseloadId).isEqualTo("WWI")
+      assertThat(members.single().active).isFalse()
+      assertThat(members.single().startDate).isEqualTo(LocalDate.of(2024, 6, 1))
+      assertThat(members.single().expiryDate).isEqualTo(LocalDate.of(2026, 2, 28))
+      assertThat(members.single().modifiedBy).isEqualTo("SYNC_TEST")
+      assertThat(members.single().modifiedTimestamp).isEqualTo(modifiedAt)
+    }
+
     // ── Account removal ──────────────────────────────────────────────────────
 
     @Test
@@ -888,6 +1018,23 @@ class SyncResourceIntTest : IntegrationTestBase() {
               caseloads = listOf(syncCaseload("MDI")),
             ),
           ),
+          administrationCaseloads = listOf(
+            syncAdministrationCaseload(
+              username = "SYNC_USER_ADMIN",
+              caseloadId = "MDI",
+              active = true,
+              expiryDate = LocalDate.of(2025, 1, 31),
+            ),
+          ),
+          memberCaseloads = listOf(
+            syncMemberCaseload(
+              username = "SYNC_USER",
+              caseloadId = "LEI",
+              active = true,
+              startDate = LocalDate.of(2024, 1, 1),
+              expiryDate = LocalDate.of(2025, 1, 31),
+            ),
+          ),
         ),
       )
     }
@@ -930,6 +1077,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
       assertFalse(userAccountRepository.existsByUsername("SYNC_USER_ADMIN"))
       assertTrue(userAccessibleCaseloadRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
       assertTrue(userRoleRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
+      assertTrue(userCaseloadAdministratorRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
+      assertTrue(userCaseloadMemberRepository.findAllByIdUsernameIn(listOf("SYNC_USER", "SYNC_USER_ADMIN")).isEmpty())
       assertTrue(userEmailsRepository.findAllByUserLegacyStaffId(legacyStaffId).isEmpty())
 
       webTestClient.get().uri("/reconciliation/user/$legacyStaffId")
@@ -968,6 +1117,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
         caseloads = listOf(syncCaseload("MDI")),
       ),
     ),
+    administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
+    memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
   ) = PrisonUserSyncRequest(
     firstName = firstName,
     lastName = lastName,
@@ -978,6 +1129,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
     modifiedBy = modifiedBy,
     emails = emails,
     accounts = accounts,
+    administrationCaseloads = administrationCaseloads,
+    memberCaseloads = memberCaseloads,
   )
 
   private fun syncEmail(email: String) = SyncPrisonUserEmail(
@@ -1018,6 +1171,44 @@ class SyncResourceIntTest : IntegrationTestBase() {
     createdBy = "SYNC_TEST",
   )
 
+  private fun syncAdministrationCaseload(
+    username: String,
+    caseloadId: String,
+    active: Boolean,
+    expiryDate: LocalDate,
+    modifiedTimestamp: LocalDateTime? = null,
+    modifiedBy: String? = null,
+  ) = SyncUserCaseloadAdministrator(
+    username = username,
+    caseloadId = caseloadId,
+    active = active,
+    expiryDate = expiryDate,
+    createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
+    createdBy = "SYNC_TEST",
+    modifiedTimestamp = modifiedTimestamp,
+    modifiedBy = modifiedBy,
+  )
+
+  private fun syncMemberCaseload(
+    username: String,
+    caseloadId: String,
+    active: Boolean,
+    startDate: LocalDate,
+    expiryDate: LocalDate,
+    modifiedTimestamp: LocalDateTime? = null,
+    modifiedBy: String? = null,
+  ) = SyncUserCaseloadMember(
+    username = username,
+    caseloadId = caseloadId,
+    active = active,
+    startDate = startDate,
+    expiryDate = expiryDate,
+    createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
+    createdBy = "SYNC_TEST",
+    modifiedTimestamp = modifiedTimestamp,
+    modifiedBy = modifiedBy,
+  )
+
   private fun syncPrisonUserAccount(
     username: String,
     activeCaseloadId: String,
@@ -1050,5 +1241,43 @@ class SyncResourceIntTest : IntegrationTestBase() {
     roleCode = roleCode,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "MIGRATION_TEST",
+  )
+
+  private fun syncPrisonUserAdministrationCaseload(
+    username: String,
+    caseloadId: String,
+    active: Boolean,
+    expiryDate: LocalDate,
+    modifiedTimestamp: LocalDateTime? = null,
+    modifiedBy: String? = null,
+  ) = SyncUserCaseloadAdministrator(
+    username = username,
+    caseloadId = caseloadId,
+    active = active,
+    expiryDate = expiryDate,
+    createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
+    createdBy = "MIGRATION_TEST",
+    modifiedTimestamp = modifiedTimestamp,
+    modifiedBy = modifiedBy,
+  )
+
+  private fun syncPrisonUserMemberCaseload(
+    username: String,
+    caseloadId: String,
+    active: Boolean,
+    startDate: LocalDate,
+    expiryDate: LocalDate,
+    modifiedTimestamp: LocalDateTime? = null,
+    modifiedBy: String? = null,
+  ) = SyncUserCaseloadMember(
+    username = username,
+    caseloadId = caseloadId,
+    active = active,
+    startDate = startDate,
+    expiryDate = expiryDate,
+    createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
+    createdBy = "MIGRATION_TEST",
+    modifiedTimestamp = modifiedTimestamp,
+    modifiedBy = modifiedBy,
   )
 }

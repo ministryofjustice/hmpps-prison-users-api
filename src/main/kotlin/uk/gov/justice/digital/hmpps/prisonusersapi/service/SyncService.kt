@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
+import jakarta.validation.ValidationException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
@@ -18,10 +19,14 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadAdministrator
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadMember
 
 @Service
 class SyncService(
@@ -29,6 +34,8 @@ class SyncService(
   private val userAccountRepository: UserAccountRepository,
   private val caseloadRepository: CaseloadRepository,
   private val userRoleRepository: UserRoleRepository,
+  private val userCaseloadAdministratorRepository: UserCaseloadAdministratorRepository,
+  private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
   private val primaryEmailDetector: PrimaryEmailDetector,
   private val syncLockRepository: SyncLockRepository,
   transactionManager: PlatformTransactionManager,
@@ -124,6 +131,7 @@ class SyncService(
       // Load existing accounts for this user (with caseloads eagerly via withCaseloads graph).
       val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(updatedUser.userId))
       val requestAccountsByUsername = request.accounts.associateBy { it.username }
+      val requestAccountUsernames = requestAccountsByUsername.keys
 
       // Remove accounts that are no longer present in the sync request.
       val accountsToRemove = existingAccounts.filter { it.username !in requestAccountsByUsername }
@@ -138,6 +146,8 @@ class SyncService(
       // Validate and load all caseloads referenced by accounts in the request.
       val allRequestedCaseloadIds = request.accounts
         .flatMap { it.caseloads.map { c -> c.caseloadId } }
+        .plus(request.administrationCaseloads.map { it.caseloadId })
+        .plus(request.memberCaseloads.map { it.caseloadId })
         .toSet()
 
       val caseloadsById = if (allRequestedCaseloadIds.isEmpty()) {
@@ -149,7 +159,19 @@ class SyncService(
         found.associateBy { it.id }
       }
 
+      validateRequestCaseloadAssignments(
+        usernames = request.administrationCaseloads.map { it.username }.toSet(),
+        accountUsernames = requestAccountUsernames,
+        fieldName = "administrationCaseloads",
+      )
+      validateRequestCaseloadAssignments(
+        usernames = request.memberCaseloads.map { it.username }.toSet(),
+        accountUsernames = requestAccountUsernames,
+        fieldName = "memberCaseloads",
+      )
+
       // Update or create each account from the request.
+      val syncedAccountsByUsername = mutableMapOf<String, UserAccount>()
       request.accounts.forEach { syncAccount ->
         val activeCaseload = syncAccount.activeCaseloadId?.let { activeCaseloadId ->
           if (!caseloadsById.containsKey(activeCaseloadId)) {
@@ -224,7 +246,34 @@ class SyncService(
             ),
           )
         }
+
+        syncedAccountsByUsername[account.username] = account
       }
+
+      if (requestAccountUsernames.isNotEmpty()) {
+        userCaseloadAdministratorRepository.deleteAllByIdUsernameIn(requestAccountUsernames)
+        userCaseloadAdministratorRepository.flush()
+        userCaseloadMemberRepository.deleteAllByIdUsernameIn(requestAccountUsernames)
+        userCaseloadMemberRepository.flush()
+
+        userCaseloadAdministratorRepository.saveAll(
+          request.administrationCaseloads.map { syncAdministratorCaseload ->
+            syncAdministratorCaseload.toUserCaseloadAdministrator(
+              userAccount = requireNotNull(syncedAccountsByUsername[syncAdministratorCaseload.username]),
+              caseload = requireNotNull(caseloadsById[syncAdministratorCaseload.caseloadId]),
+            )
+          },
+        )
+        userCaseloadMemberRepository.saveAll(
+          request.memberCaseloads.map { syncMemberCaseload ->
+            syncMemberCaseload.toUserCaseloadMember(
+              userAccount = requireNotNull(syncedAccountsByUsername[syncMemberCaseload.username]),
+              caseload = requireNotNull(caseloadsById[syncMemberCaseload.caseloadId]),
+            )
+          },
+        )
+      }
+
       return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
     } finally {
       // Release the lock by deleting the row before transaction completes.
@@ -268,6 +317,17 @@ class SyncService(
       userEmails = mutableListOf(),
     ),
   )
+
+  private fun validateRequestCaseloadAssignments(
+    usernames: Set<String>,
+    accountUsernames: Set<String>,
+    fieldName: String,
+  ) {
+    val unknownUsernames = usernames - accountUsernames
+    if (unknownUsernames.isNotEmpty()) {
+      throw ValidationException("$fieldName reference unknown account usernames: $unknownUsernames")
+    }
+  }
 }
 
 class SyncLockAcquisitionTimeoutException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
