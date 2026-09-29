@@ -104,7 +104,7 @@ CREATE INDEX ix_user_accessible_caseloads_audit_caseload_id ON user_accessible_c
 CREATE TABLE user_caseload_administrators_audit (
     username TEXT NOT NULL,
     caseload_id VARCHAR(6) NOT NULL,
-    active BOOLEAN,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     expiry_date DATE,
     created_timestamp TIMESTAMP,
     created_by TEXT,
@@ -126,7 +126,7 @@ CREATE TABLE user_caseload_members_audit (
     caseload_id VARCHAR(6) NOT NULL,
     start_date DATE,
     expiry_date DATE,
-    active BOOLEAN,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     created_timestamp TIMESTAMP,
     created_by TEXT,
     modified_timestamp TIMESTAMP,

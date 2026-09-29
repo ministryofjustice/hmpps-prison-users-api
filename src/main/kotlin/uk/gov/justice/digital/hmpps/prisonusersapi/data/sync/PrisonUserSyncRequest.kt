@@ -281,13 +281,13 @@ data class SyncUserCaseloadAdministrator(
   val active: Boolean,
 
   @Schema(
-    required = true,
+    required = false,
     description = "Record expiry date",
     type = "string",
     format = "date",
     example = "2022-01-01",
   )
-  val expiryDate: LocalDate,
+  val expiryDate: LocalDate? = null,
 
   @Schema(
     required = true,
@@ -358,13 +358,13 @@ data class SyncUserCaseloadMember(
   val startDate: LocalDate,
 
   @Schema(
-    required = true,
+    required = false,
     description = "Record expiry date",
     type = "string",
     format = "date",
     example = "2022-01-01",
   )
-  val expiryDate: LocalDate,
+  val expiryDate: LocalDate? = null,
 
   @Schema(
     required = true,
