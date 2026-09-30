@@ -21,7 +21,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockReposi
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
@@ -33,7 +32,6 @@ class SyncService(
   private val usersRepository: UsersRepository,
   private val userAccountRepository: UserAccountRepository,
   private val caseloadRepository: CaseloadRepository,
-  private val userRoleRepository: UserRoleRepository,
   private val userCaseloadAdministratorRepository: UserCaseloadAdministratorRepository,
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
   private val primaryEmailDetector: PrimaryEmailDetector,
@@ -136,9 +134,6 @@ class SyncService(
       // Remove accounts that are no longer present in the sync request.
       val accountsToRemove = existingAccounts.filter { it.username !in requestAccountsByUsername }
       if (accountsToRemove.isNotEmpty()) {
-        // UserRole has no JPA cascade from UserAccount, so delete roles manually first.
-        userRoleRepository.deleteAllByIdUsernameIn(accountsToRemove.map { it.username })
-        // deleteAll cascades to userAccessibleCaseloads via orphanRemoval.
         userAccountRepository.deleteAll(accountsToRemove)
         userAccountRepository.flush()
       }
@@ -185,11 +180,6 @@ class SyncService(
 
         val existingAccount = existingAccounts.find { it.username == syncAccount.username }
 
-        if (existingAccount != null) {
-          // Delete existing roles before saving (no JPA cascade from UserAccount → UserRole).
-          userRoleRepository.deleteAllByIdUsernameIn(listOf(syncAccount.username))
-        }
-
         // Save the account. Pass empty userAccessibleCaseloads so JPA orphanRemoval
         // automatically deletes the old caseloads during the merge/flush.
         val account = if (existingAccount != null) {
@@ -202,6 +192,7 @@ class SyncService(
               modifiedTimestamp = syncAccount.modifiedTimestamp,
               modifiedBy = syncAccount.modifiedBy,
               userAccessibleCaseloads = mutableListOf(),
+              userRoleCodes = mutableListOf(),
             ),
           )
         } else {
