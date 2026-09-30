@@ -242,27 +242,72 @@ class SyncService(
       }
 
       if (requestAccountUsernames.isNotEmpty()) {
-        userCaseloadAdministratorRepository.deleteAllByIdUsernameIn(requestAccountUsernames)
-        userCaseloadAdministratorRepository.flush()
-        userCaseloadMemberRepository.deleteAllByIdUsernameIn(requestAccountUsernames)
-        userCaseloadMemberRepository.flush()
+        // Sync administration caseloads: update existing, create new, delete absent
+        val existingAdministrators = userCaseloadAdministratorRepository.findAllByIdUsernameIn(requestAccountUsernames)
+        val requestAdministratorsByKey = request.administrationCaseloads.associateBy { it.username to it.caseloadId }
+        val existingAdministratorsByKey = existingAdministrators.associateBy { it.id.username to it.id.caseloadId }
 
+        // Delete administrators absent from the request
+        val administratorsToDelete = existingAdministrators.filter { (it.id.username to it.id.caseloadId) !in requestAdministratorsByKey }
+        if (administratorsToDelete.isNotEmpty()) {
+          userCaseloadAdministratorRepository.deleteAll(administratorsToDelete)
+          userCaseloadAdministratorRepository.flush()
+        }
+
+        // Update or create administrators present in the request
         userCaseloadAdministratorRepository.saveAll(
           request.administrationCaseloads.map { syncAdministratorCaseload ->
-            syncAdministratorCaseload.toUserCaseloadAdministrator(
-              userAccount = requireNotNull(syncedAccountsByUsername[syncAdministratorCaseload.username]),
-              caseload = requireNotNull(caseloadsById[syncAdministratorCaseload.caseloadId]),
-            )
+            val key = syncAdministratorCaseload.username to syncAdministratorCaseload.caseloadId
+            val existing = existingAdministratorsByKey[key]
+            existing // Update existing record with any changed fields
+              ?.copy(
+                active = syncAdministratorCaseload.active,
+                expiryDate = syncAdministratorCaseload.expiryDate,
+                modifiedBy = syncAdministratorCaseload.modifiedBy,
+                modifiedTimestamp = syncAdministratorCaseload.modifiedTimestamp,
+              )
+              ?: // Create new record
+              syncAdministratorCaseload.toUserCaseloadAdministrator(
+                userAccount = requireNotNull(syncedAccountsByUsername[syncAdministratorCaseload.username]),
+                caseload = requireNotNull(caseloadsById[syncAdministratorCaseload.caseloadId]),
+              )
           },
         )
+        userCaseloadAdministratorRepository.flush()
+
+        // Sync member caseloads: update existing, create new, delete absent
+        val existingMembers = userCaseloadMemberRepository.findAllByIdUsernameIn(requestAccountUsernames)
+        val requestMembersByKey = request.memberCaseloads.associateBy { it.username to it.caseloadId }
+        val existingMembersByKey = existingMembers.associateBy { it.id.username to it.id.caseloadId }
+
+        // Delete members absent from the request
+        val membersToDelete = existingMembers.filter { (it.id.username to it.id.caseloadId) !in requestMembersByKey }
+        if (membersToDelete.isNotEmpty()) {
+          userCaseloadMemberRepository.deleteAll(membersToDelete)
+          userCaseloadMemberRepository.flush()
+        }
+
+        // Update or create members present in the request
         userCaseloadMemberRepository.saveAll(
           request.memberCaseloads.map { syncMemberCaseload ->
-            syncMemberCaseload.toUserCaseloadMember(
-              userAccount = requireNotNull(syncedAccountsByUsername[syncMemberCaseload.username]),
-              caseload = requireNotNull(caseloadsById[syncMemberCaseload.caseloadId]),
-            )
+            val key = syncMemberCaseload.username to syncMemberCaseload.caseloadId
+            val existing = existingMembersByKey[key]
+            existing // Update existing record with any changed fields
+              ?.copy(
+                startDate = syncMemberCaseload.startDate,
+                expiryDate = syncMemberCaseload.expiryDate,
+                active = syncMemberCaseload.active,
+                modifiedBy = syncMemberCaseload.modifiedBy,
+                modifiedTimestamp = syncMemberCaseload.modifiedTimestamp,
+              )
+              ?: // Create new record
+              syncMemberCaseload.toUserCaseloadMember(
+                userAccount = requireNotNull(syncedAccountsByUsername[syncMemberCaseload.username]),
+                caseload = requireNotNull(caseloadsById[syncMemberCaseload.caseloadId]),
+              )
           },
         )
+        userCaseloadMemberRepository.flush()
       }
 
       return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
