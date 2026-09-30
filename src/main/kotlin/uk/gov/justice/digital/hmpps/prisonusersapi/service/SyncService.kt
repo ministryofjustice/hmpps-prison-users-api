@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccessibleCaseloadId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRoleId
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
@@ -22,7 +23,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRep
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
-import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.addEmailsTo
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadMember
@@ -123,8 +123,52 @@ class SyncService(
           )
         }
 
-      // Insert new emails directly into the managed collection so JPA handles the INSERT via cascade.
-      request.addEmailsTo(updatedUser, primaryEmailDetector)
+      // Sync emails: delete absent, update isPrimary, create new
+      val requestEmailsByAddress = request.emails.associateBy { it.email }
+      val primaryEmailAddress = primaryEmailDetector.getPrimaryEmail(request.emails)
+      val existingEmailsByAddress = updatedUser.userEmails.associateBy { it.email }
+
+      // Delete emails absent from the request
+      val emailsToDelete = updatedUser.userEmails.filter { it.email !in requestEmailsByAddress }
+      emailsToDelete.forEach { updatedUser.userEmails.remove(it) }
+
+      // Update isPrimary flag for existing emails and create new emails from request
+      requestEmailsByAddress.forEach { (emailAddress, syncEmail) ->
+        val existing = existingEmailsByAddress[emailAddress]
+        if (existing != null) {
+          // Email exists; update isPrimary if needed by recreating it
+          val shouldBePrimary = emailAddress == primaryEmailAddress
+          if (existing.isPrimary != shouldBePrimary) {
+            updatedUser.userEmails.remove(existing)
+            updatedUser.addUserEmail(
+              UserEmail(
+                id = existing.id,
+                email = emailAddress,
+                isPrimary = shouldBePrimary,
+                createdBy = existing.createdBy,
+                createdTimestamp = existing.createdTimestamp,
+                modifiedBy = syncEmail.modifiedBy,
+                modifiedTimestamp = syncEmail.modifiedTimestamp,
+                user = updatedUser,
+              ),
+            )
+          }
+        } else {
+          // New email; create with correct isPrimary flag
+          updatedUser.addUserEmail(
+            UserEmail(
+              email = emailAddress,
+              isPrimary = emailAddress == primaryEmailAddress,
+              createdBy = syncEmail.createdBy,
+              createdTimestamp = syncEmail.createdTimestamp,
+              modifiedBy = syncEmail.modifiedBy,
+              modifiedTimestamp = syncEmail.modifiedTimestamp,
+              user = updatedUser,
+            ),
+          )
+        }
+      }
+      usersRepository.flush()
 
       // Load existing accounts for this user (with caseloads eagerly via withCaseloads graph).
       val existingAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(updatedUser.userId))
@@ -180,8 +224,7 @@ class SyncService(
 
         val existingAccount = existingAccounts.find { it.username == syncAccount.username }
 
-        // Save the account. Pass empty userAccessibleCaseloads so JPA orphanRemoval
-        // automatically deletes the old caseloads during the merge/flush.
+        // Save the account with updated scalar fields
         val account = if (existingAccount != null) {
           userAccountRepository.saveAndFlush(
             existingAccount.copy(
@@ -191,8 +234,6 @@ class SyncService(
               lastLoggedIn = syncAccount.lastLoggedIn,
               modifiedTimestamp = syncAccount.modifiedTimestamp,
               modifiedBy = syncAccount.modifiedBy,
-              userAccessibleCaseloads = mutableListOf(),
-              userRoleCodes = mutableListOf(),
             ),
           )
         } else {
@@ -212,35 +253,57 @@ class SyncService(
           )
         }
 
-        // Insert new roles into the managed collection so JPA handles the INSERT via cascade.
-        syncAccount.roles.forEach { syncRole ->
-          account.userRoleCodes.add(
-            UserRole(
-              id = UserRoleId(account.username, syncRole.roleCode),
-              userAccount = account,
-              createdBy = syncRole.createdBy,
-              createdTimestamp = syncRole.createdTimestamp,
-            ),
-          )
+        // Sync roles: delete absent, create new
+        val requestRolesByCode = syncAccount.roles.associateBy { it.roleCode }
+        val existingRolesByCode = account.userRoleCodes.associateBy { it.id.roleCode }
+
+        // Delete roles absent from the request
+        val rolesToDelete = account.userRoleCodes.filter { it.id.roleCode !in requestRolesByCode }
+        rolesToDelete.forEach { account.userRoleCodes.remove(it) }
+
+        // Create new roles from request
+        requestRolesByCode.forEach { (roleCode, syncRole) ->
+          if (roleCode !in existingRolesByCode) {
+            account.userRoleCodes.add(
+              UserRole(
+                id = UserRoleId(account.username, syncRole.roleCode),
+                userAccount = account,
+                createdBy = syncRole.createdBy,
+                createdTimestamp = syncRole.createdTimestamp,
+              ),
+            )
+          }
         }
 
-        // Insert new accessible caseloads into the managed collection so JPA handles the INSERT via cascade.
-        syncAccount.caseloads.forEach { syncCaseload ->
-          val caseload = requireNotNull(caseloadsById[syncCaseload.caseloadId])
-          account.userAccessibleCaseloads.add(
-            UserAccessibleCaseload(
-              id = UserAccessibleCaseloadId(account.username, caseload.id),
-              caseload = caseload,
-              userAccount = account,
-              createdBy = syncCaseload.createdBy,
-              createdTimestamp = syncCaseload.createdTimestamp,
-            ),
-          )
+        // Sync accessible caseloads: delete absent, create new
+        val requestCaseloadsByCode = syncAccount.caseloads.associateBy { it.caseloadId }
+        val existingCaseloadsByCode = account.userAccessibleCaseloads.associateBy { it.id.caseloadId }
+
+        // Delete caseloads absent from the request
+        val caseloadsToDelete = account.userAccessibleCaseloads.filter { it.id.caseloadId !in requestCaseloadsByCode }
+        caseloadsToDelete.forEach { account.userAccessibleCaseloads.remove(it) }
+
+        // Create new caseloads from request
+        requestCaseloadsByCode.forEach { (caseloadId, syncCaseload) ->
+          if (caseloadId !in existingCaseloadsByCode) {
+            val caseload = requireNotNull(caseloadsById[syncCaseload.caseloadId])
+            account.userAccessibleCaseloads.add(
+              UserAccessibleCaseload(
+                id = UserAccessibleCaseloadId(account.username, caseload.id),
+                caseload = caseload,
+                userAccount = account,
+                createdBy = syncCaseload.createdBy,
+                createdTimestamp = syncCaseload.createdTimestamp,
+              ),
+            )
+          }
         }
 
         syncedAccountsByUsername[account.username] = account
       }
 
+      // Flush all account and role/caseload changes before syncing user-level caseload links
+      userAccountRepository.flush()
       if (requestAccountUsernames.isNotEmpty()) {
         // Sync administration caseloads: update existing, create new, delete absent
         val existingAdministrators = userCaseloadAdministratorRepository.findAllByIdUsernameIn(requestAccountUsernames)
@@ -350,7 +413,6 @@ class SyncService(
       status = request.status,
       modifiedTimestamp = request.modifiedTimestamp,
       modifiedBy = request.modifiedBy,
-      userEmails = mutableListOf(),
     ),
   )
 
