@@ -27,6 +27,9 @@
 - Run only auth, then start the app from IntelliJ with profile `dev`: `docker compose pull && docker compose up --scale hmpps-prison-users-api=0`
 - For a real local Postgres instead of in-memory H2, start `docker-compose-test.yml` and run with profile `local-postgres` (DB is on `localhost:5434`, credentials are in `src/main/resources/application-local-postgres.yml`).
 - Run tests with `./gradlew test`; integration tests use `@SpringBootTest` + `WebTestClient`, not MockMvc.
+- Run a single test class: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest"`
+- Run a single test method: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest.should return 404 when user not found"`
+- Lint/format with ktlint: `./gradlew ktlintCheck` (check only) or `./gradlew ktlintFormat` (auto-fix).
 
 ## Project-specific conventions
 - Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it (except allowlisted endpoints such as `GET /reference-data/caseloads` which is public and returns non-sensitive reference data, and Swagger/error paths).
