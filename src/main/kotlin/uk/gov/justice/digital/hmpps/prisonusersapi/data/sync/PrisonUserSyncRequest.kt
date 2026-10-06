@@ -70,12 +70,6 @@ data class PrisonUserSyncRequest(
 
   @Schema(description = "The list of accounts associated with the user")
   val accounts: List<SyncPrisonUserAccount> = emptyList(),
-
-  @Schema(description = "The list of administration caseloads associated with the user")
-  val administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
-
-  @Schema(description = "The list of member caseloads associated with the user")
-  val memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -167,6 +161,12 @@ data class SyncPrisonUserAccount(
   )
   val activeCaseloadId: String? = null,
 
+  @Schema(description = "The list of administration caseloads assigned to this user account")
+  val administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
+
+  @Schema(description = "The list of member caseloads assigned to this user account")
+  val memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
+
   @Schema(
     required = true,
     description = "Record creation timestamp",
@@ -257,13 +257,6 @@ data class SyncPrisonUserCaseload(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Caseload assigned to a user account to administer", type = "object")
 data class SyncUserCaseloadAdministrator(
-  @Schema(
-    required = true,
-    description = "Username for the user account",
-    type = "string",
-    example = "TEST_USER",
-  )
-  val username: String,
 
   @Schema(
     required = true,
@@ -325,13 +318,6 @@ data class SyncUserCaseloadAdministrator(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Caseload assigned to a user account", type = "object")
 data class SyncUserCaseloadMember(
-  @Schema(
-    required = true,
-    description = "Username for the user account",
-    type = "string",
-    example = "TEST_USER",
-  )
-  val username: String,
 
   @Schema(
     required = true,

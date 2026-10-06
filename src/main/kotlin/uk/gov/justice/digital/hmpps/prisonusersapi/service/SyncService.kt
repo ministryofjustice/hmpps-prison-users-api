@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
-import jakarta.validation.ValidationException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
@@ -185,8 +184,8 @@ class SyncService(
       // Validate and load all caseloads referenced by accounts in the request.
       val allRequestedCaseloadIds = request.accounts
         .flatMap { it.caseloads.map { c -> c.caseloadId } }
-        .plus(request.administrationCaseloads.map { it.caseloadId })
-        .plus(request.memberCaseloads.map { it.caseloadId })
+        .plus(request.accounts.flatMap { it.administrationCaseloads.map { c -> c.caseloadId } })
+        .plus(request.accounts.flatMap { it.memberCaseloads.map { c -> c.caseloadId } })
         .toSet()
 
       val caseloadsById = if (allRequestedCaseloadIds.isEmpty()) {
@@ -197,17 +196,6 @@ class SyncService(
         if (missingIds.isNotEmpty()) throw CaseloadNotFoundException("Caseload(s) $missingIds not found")
         found.associateBy { it.id }
       }
-
-      validateRequestCaseloadAssignments(
-        usernames = request.administrationCaseloads.map { it.username }.toSet(),
-        accountUsernames = requestAccountUsernames,
-        fieldName = "administrationCaseloads",
-      )
-      validateRequestCaseloadAssignments(
-        usernames = request.memberCaseloads.map { it.username }.toSet(),
-        accountUsernames = requestAccountUsernames,
-        fieldName = "memberCaseloads",
-      )
 
       // Update or create each account from the request.
       val syncedAccountsByUsername = mutableMapOf<String, UserAccount>()
@@ -302,12 +290,20 @@ class SyncService(
         syncedAccountsByUsername[account.username] = account
       }
 
-      // Flush all account and role/caseload changes before syncing user-level caseload links
+      // Flush all account and role/caseload changes before syncing account-level caseload administrator/member links
       userAccountRepository.flush()
       if (requestAccountUsernames.isNotEmpty()) {
+        // Process all administration and member caseloads for all accounts
+        val allAdministrationCaseloads = request.accounts.flatMap { account ->
+          account.administrationCaseloads.map { adminCaseload -> account.username to adminCaseload }
+        }
+        val allMemberCaseloads = request.accounts.flatMap { account ->
+          account.memberCaseloads.map { memberCaseload -> account.username to memberCaseload }
+        }
+
         // Sync administration caseloads: update existing, create new, delete absent
         val existingAdministrators = userCaseloadAdministratorRepository.findAllByIdUsernameIn(requestAccountUsernames)
-        val requestAdministratorsByKey = request.administrationCaseloads.associateBy { it.username to it.caseloadId }
+        val requestAdministratorsByKey = allAdministrationCaseloads.associateBy { (username, caseload) -> username to caseload.caseloadId }
         val existingAdministratorsByKey = existingAdministrators.associateBy { it.id.username to it.id.caseloadId }
 
         // Delete administrators absent from the request
@@ -319,8 +315,8 @@ class SyncService(
 
         // Update or create administrators present in the request
         userCaseloadAdministratorRepository.saveAll(
-          request.administrationCaseloads.map { syncAdministratorCaseload ->
-            val key = syncAdministratorCaseload.username to syncAdministratorCaseload.caseloadId
+          allAdministrationCaseloads.map { (username, syncAdministratorCaseload) ->
+            val key = username to syncAdministratorCaseload.caseloadId
             val existing = existingAdministratorsByKey[key]
             existing // Update existing record with any changed fields
               ?.copy(
@@ -331,7 +327,7 @@ class SyncService(
               )
               ?: // Create new record
               syncAdministratorCaseload.toUserCaseloadAdministrator(
-                userAccount = requireNotNull(syncedAccountsByUsername[syncAdministratorCaseload.username]),
+                userAccount = requireNotNull(syncedAccountsByUsername[username]),
                 caseload = requireNotNull(caseloadsById[syncAdministratorCaseload.caseloadId]),
               )
           },
@@ -340,7 +336,7 @@ class SyncService(
 
         // Sync member caseloads: update existing, create new, delete absent
         val existingMembers = userCaseloadMemberRepository.findAllByIdUsernameIn(requestAccountUsernames)
-        val requestMembersByKey = request.memberCaseloads.associateBy { it.username to it.caseloadId }
+        val requestMembersByKey = allMemberCaseloads.associateBy { (username, caseload) -> username to caseload.caseloadId }
         val existingMembersByKey = existingMembers.associateBy { it.id.username to it.id.caseloadId }
 
         // Delete members absent from the request
@@ -352,8 +348,8 @@ class SyncService(
 
         // Update or create members present in the request
         userCaseloadMemberRepository.saveAll(
-          request.memberCaseloads.map { syncMemberCaseload ->
-            val key = syncMemberCaseload.username to syncMemberCaseload.caseloadId
+          allMemberCaseloads.map { (username, syncMemberCaseload) ->
+            val key = username to syncMemberCaseload.caseloadId
             val existing = existingMembersByKey[key]
             existing // Update existing record with any changed fields
               ?.copy(
@@ -365,7 +361,7 @@ class SyncService(
               )
               ?: // Create new record
               syncMemberCaseload.toUserCaseloadMember(
-                userAccount = requireNotNull(syncedAccountsByUsername[syncMemberCaseload.username]),
+                userAccount = requireNotNull(syncedAccountsByUsername[username]),
                 caseload = requireNotNull(caseloadsById[syncMemberCaseload.caseloadId]),
               )
           },
@@ -415,17 +411,6 @@ class SyncService(
       modifiedBy = request.modifiedBy,
     ),
   )
-
-  private fun validateRequestCaseloadAssignments(
-    usernames: Set<String>,
-    accountUsernames: Set<String>,
-    fieldName: String,
-  ) {
-    val unknownUsernames = usernames - accountUsernames
-    if (unknownUsernames.isNotEmpty()) {
-      throw ValidationException("$fieldName reference unknown account usernames: $unknownUsernames")
-    }
-  }
 }
 
 class SyncLockAcquisitionTimeoutException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)

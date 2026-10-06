@@ -96,29 +96,27 @@ class SyncResourceIntTest : IntegrationTestBase() {
                 syncPrisonUserRole(roleCode = "ROLE_OLD_ONE"),
                 syncPrisonUserRole(roleCode = "ROLE_OLD_TWO"),
               ),
+              memberCaseloads = listOf(
+                syncPrisonUserMemberCaseload(
+                  caseloadId = "LEI",
+                  active = true,
+                  startDate = LocalDate.of(2024, 1, 1),
+                  expiryDate = LocalDate.of(2025, 1, 31),
+                ),
+              ),
             ),
             syncPrisonUserAccount(
               username = "SYNC_USER_ADMIN",
               activeCaseloadId = "MDI",
               caseloads = listOf(syncPrisonUserCaseload("MDI")),
               roles = listOf(syncPrisonUserRole(roleCode = "ROLE_ADMIN_OLD")),
-            ),
-          ),
-          administrationCaseloads = listOf(
-            syncPrisonUserAdministrationCaseload(
-              username = "SYNC_USER_ADMIN",
-              caseloadId = "MDI",
-              active = true,
-              expiryDate = LocalDate.of(2025, 1, 31),
-            ),
-          ),
-          memberCaseloads = listOf(
-            syncPrisonUserMemberCaseload(
-              username = "SYNC_USER",
-              caseloadId = "LEI",
-              active = true,
-              startDate = LocalDate.of(2024, 1, 1),
-              expiryDate = LocalDate.of(2025, 1, 31),
+              administrationCaseloads = listOf(
+                syncPrisonUserAdministrationCaseload(
+                  caseloadId = "MDI",
+                  active = true,
+                  expiryDate = LocalDate.of(2025, 1, 31),
+                ),
+              ),
             ),
           ),
         ),
@@ -176,28 +174,26 @@ class SyncResourceIntTest : IntegrationTestBase() {
                   activeCaseloadId = "LEI",
                   caseloads = listOf(syncCaseload("LEI")),
                   roles = listOf(syncRole("ROLE_CREATED_ONE")),
+                  memberCaseloads = listOf(
+                    syncMemberCaseload(
+                      caseloadId = "LEI",
+                      active = true,
+                      startDate = LocalDate.of(2024, 1, 1),
+                      expiryDate = LocalDate.of(2026, 1, 31),
+                    ),
+                  ),
                 ),
                 syncAccount(
                   username = "NEW_SYNC_USER_ADMIN",
                   activeCaseloadId = "MDI",
                   caseloads = listOf(syncCaseload("MDI")),
-                ),
-              ),
-              administrationCaseloads = listOf(
-                syncAdministrationCaseload(
-                  username = "NEW_SYNC_USER_ADMIN",
-                  caseloadId = "MDI",
-                  active = true,
-                  expiryDate = LocalDate.of(2026, 1, 31),
-                ),
-              ),
-              memberCaseloads = listOf(
-                syncMemberCaseload(
-                  username = "NEW_SYNC_USER",
-                  caseloadId = "LEI",
-                  active = true,
-                  startDate = LocalDate.of(2024, 1, 1),
-                  expiryDate = LocalDate.of(2026, 1, 31),
+                  administrationCaseloads = listOf(
+                    syncAdministrationCaseload(
+                      caseloadId = "MDI",
+                      active = true,
+                      expiryDate = LocalDate.of(2026, 1, 31),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -824,32 +820,30 @@ class SyncResourceIntTest : IntegrationTestBase() {
                   username = "SYNC_USER",
                   activeCaseloadId = "WWI",
                   caseloads = listOf(syncCaseload("WWI")),
+                  memberCaseloads = listOf(
+                    syncMemberCaseload(
+                      caseloadId = "WWI",
+                      active = false,
+                      startDate = LocalDate.of(2024, 6, 1),
+                      expiryDate = LocalDate.of(2026, 2, 28),
+                      modifiedTimestamp = modifiedAt,
+                      modifiedBy = "SYNC_TEST",
+                    ),
+                  ),
                 ),
                 syncAccount(
                   username = "SYNC_USER_ADMIN",
                   activeCaseloadId = "LEI",
                   caseloads = listOf(syncCaseload("LEI")),
-                ),
-              ),
-              administrationCaseloads = listOf(
-                syncAdministrationCaseload(
-                  username = "SYNC_USER_ADMIN",
-                  caseloadId = "LEI",
-                  active = false,
-                  expiryDate = LocalDate.of(2026, 2, 28),
-                  modifiedTimestamp = modifiedAt,
-                  modifiedBy = "SYNC_TEST",
-                ),
-              ),
-              memberCaseloads = listOf(
-                syncMemberCaseload(
-                  username = "SYNC_USER",
-                  caseloadId = "WWI",
-                  active = false,
-                  startDate = LocalDate.of(2024, 6, 1),
-                  expiryDate = LocalDate.of(2026, 2, 28),
-                  modifiedTimestamp = modifiedAt,
-                  modifiedBy = "SYNC_TEST",
+                  administrationCaseloads = listOf(
+                    syncAdministrationCaseload(
+                      caseloadId = "LEI",
+                      active = false,
+                      expiryDate = LocalDate.of(2026, 2, 28),
+                      modifiedTimestamp = modifiedAt,
+                      modifiedBy = "SYNC_TEST",
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1011,28 +1005,26 @@ class SyncResourceIntTest : IntegrationTestBase() {
               activeCaseloadId = "LEI",
               caseloads = listOf(syncCaseload("LEI"), syncCaseload("MDI")),
               roles = listOf(syncRole("ROLE_DELETE_ME")),
+              memberCaseloads = listOf(
+                syncMemberCaseload(
+                  caseloadId = "LEI",
+                  active = true,
+                  startDate = LocalDate.of(2024, 1, 1),
+                  expiryDate = LocalDate.of(2025, 1, 31),
+                ),
+              ),
             ),
             syncAccount(
               username = "SYNC_USER_ADMIN",
               activeCaseloadId = "MDI",
               caseloads = listOf(syncCaseload("MDI")),
-            ),
-          ),
-          administrationCaseloads = listOf(
-            syncAdministrationCaseload(
-              username = "SYNC_USER_ADMIN",
-              caseloadId = "MDI",
-              active = true,
-              expiryDate = LocalDate.of(2025, 1, 31),
-            ),
-          ),
-          memberCaseloads = listOf(
-            syncMemberCaseload(
-              username = "SYNC_USER",
-              caseloadId = "LEI",
-              active = true,
-              startDate = LocalDate.of(2024, 1, 1),
-              expiryDate = LocalDate.of(2025, 1, 31),
+              administrationCaseloads = listOf(
+                syncAdministrationCaseload(
+                  caseloadId = "MDI",
+                  active = true,
+                  expiryDate = LocalDate.of(2025, 1, 31),
+                ),
+              ),
             ),
           ),
         ),
@@ -1117,8 +1109,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
         caseloads = listOf(syncCaseload("MDI")),
       ),
     ),
-    administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
-    memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
   ) = PrisonUserSyncRequest(
     firstName = firstName,
     lastName = lastName,
@@ -1129,8 +1119,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
     modifiedBy = modifiedBy,
     emails = emails,
     accounts = accounts,
-    administrationCaseloads = administrationCaseloads,
-    memberCaseloads = memberCaseloads,
   )
 
   private fun syncEmail(email: String) = SyncPrisonUserEmail(
@@ -1147,6 +1135,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
     lastLoggedIn: LocalDateTime? = null,
     caseloads: List<SyncPrisonUserCaseload> = emptyList(),
     roles: List<SyncPrisonUserRole> = emptyList(),
+    administrationCaseloads: List<SyncUserCaseloadAdministrator> = emptyList(),
+    memberCaseloads: List<SyncUserCaseloadMember> = emptyList(),
   ) = SyncPrisonUserAccount(
     username = username,
     accountType = accountType,
@@ -1155,6 +1145,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
     lastLoggedIn = lastLoggedIn,
     caseloads = caseloads,
     roles = roles,
+    administrationCaseloads = administrationCaseloads,
+    memberCaseloads = memberCaseloads,
     createdTimestamp = LocalDateTime.of(2024, 1, 1, 12, 0),
     createdBy = "SYNC_TEST",
   )
@@ -1172,14 +1164,12 @@ class SyncResourceIntTest : IntegrationTestBase() {
   )
 
   private fun syncAdministrationCaseload(
-    username: String,
     caseloadId: String,
     active: Boolean,
     expiryDate: LocalDate,
     modifiedTimestamp: LocalDateTime? = null,
     modifiedBy: String? = null,
   ) = SyncUserCaseloadAdministrator(
-    username = username,
     caseloadId = caseloadId,
     active = active,
     expiryDate = expiryDate,
@@ -1190,7 +1180,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
   )
 
   private fun syncMemberCaseload(
-    username: String,
     caseloadId: String,
     active: Boolean,
     startDate: LocalDate,
@@ -1198,7 +1187,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
     modifiedTimestamp: LocalDateTime? = null,
     modifiedBy: String? = null,
   ) = SyncUserCaseloadMember(
-    username = username,
     caseloadId = caseloadId,
     active = active,
     startDate = startDate,
@@ -1214,6 +1202,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
     activeCaseloadId: String,
     caseloads: List<SyncPrisonUserCaseload> = listOf(),
     roles: List<SyncPrisonUserRole> = listOf(),
+    administrationCaseloads: List<SyncUserCaseloadAdministrator> = listOf(),
+    memberCaseloads: List<SyncUserCaseloadMember> = listOf(),
   ) = SyncPrisonUserAccount(
     username = username,
     accountType = UsageType.GENERAL,
@@ -1223,6 +1213,8 @@ class SyncResourceIntTest : IntegrationTestBase() {
     createdBy = "MIGRATION_TEST",
     caseloads = caseloads,
     roles = roles,
+    administrationCaseloads = administrationCaseloads,
+    memberCaseloads = memberCaseloads,
   )
 
   private fun syncUserEmail(email: String) = SyncPrisonUserEmail(
@@ -1244,14 +1236,12 @@ class SyncResourceIntTest : IntegrationTestBase() {
   )
 
   private fun syncPrisonUserAdministrationCaseload(
-    username: String,
     caseloadId: String,
     active: Boolean,
     expiryDate: LocalDate,
     modifiedTimestamp: LocalDateTime? = null,
     modifiedBy: String? = null,
   ) = SyncUserCaseloadAdministrator(
-    username = username,
     caseloadId = caseloadId,
     active = active,
     expiryDate = expiryDate,
@@ -1262,7 +1252,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
   )
 
   private fun syncPrisonUserMemberCaseload(
-    username: String,
     caseloadId: String,
     active: Boolean,
     startDate: LocalDate,
@@ -1270,7 +1259,6 @@ class SyncResourceIntTest : IntegrationTestBase() {
     modifiedTimestamp: LocalDateTime? = null,
     modifiedBy: String? = null,
   ) = SyncUserCaseloadMember(
-    username = username,
     caseloadId = caseloadId,
     active = active,
     startDate = startDate,
