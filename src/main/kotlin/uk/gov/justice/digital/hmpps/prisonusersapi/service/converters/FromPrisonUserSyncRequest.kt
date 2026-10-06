@@ -47,7 +47,7 @@ fun PrisonUserSyncRequest.addEmailsTo(user: User, primaryEmailDetector: PrimaryE
 }
 
 fun SyncUserCaseloadAdministrator.toUserCaseloadAdministrator(userAccount: UserAccount, caseload: Caseload): UserCaseloadAdministrator = UserCaseloadAdministrator(
-  id = UserCaseloadAdministratorId(username = username, caseloadId = caseloadId),
+  id = UserCaseloadAdministratorId(username = userAccount.username, caseloadId = caseloadId),
   caseload = caseload,
   userAccount = userAccount,
   active = active,
@@ -59,7 +59,7 @@ fun SyncUserCaseloadAdministrator.toUserCaseloadAdministrator(userAccount: UserA
 )
 
 fun SyncUserCaseloadMember.toUserCaseloadMember(userAccount: UserAccount, caseload: Caseload): UserCaseloadMember = UserCaseloadMember(
-  id = UserCaseloadMemberId(username = username, caseloadId = caseloadId),
+  id = UserCaseloadMemberId(username = userAccount.username, caseloadId = caseloadId),
   caseload = caseload,
   userAccount = userAccount,
   startDate = startDate,
