@@ -13,6 +13,8 @@ import java.util.UUID
 
 class UserCleanupServiceIntTest : IntegrationTestBase() {
 
+  private val insertedRevisionIds = mutableSetOf<Long>()
+
   @Autowired
   private lateinit var userCleanupService: UserCleanupService
 
@@ -35,8 +37,11 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     jdbcTemplate.update("DELETE FROM user_emails", emptyMap<String, Any?>())
     jdbcTemplate.update("DELETE FROM user_account", emptyMap<String, Any?>())
     jdbcTemplate.update("DELETE FROM users", emptyMap<String, Any?>())
-    jdbcTemplate.update("DELETE FROM caseloads", emptyMap<String, Any?>())
-    jdbcTemplate.update("DELETE FROM revinfo", emptyMap<String, Any?>())
+
+    if (insertedRevisionIds.isNotEmpty()) {
+      jdbcTemplate.update("DELETE FROM revinfo WHERE rev IN (:revisions)", mapOf("revisions" to insertedRevisionIds.toList()))
+      insertedRevisionIds.clear()
+    }
   }
 
   @Test
@@ -131,7 +136,9 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     val staleRevisionTs = Instant.now().minusSeconds(8L * 365 * 24 * 60 * 60).toEpochMilli()
     val staleTimestamp = LocalDateTime.now().minusSeconds(8L * 365 * 24 * 60 * 60)
     val rev = nextRevisionNumber()
+    val caseloadId = "LEI"
     val auditEmailId = nextAuditEmailId()
+    insertedRevisionIds.add(rev)
     jdbcTemplate.update(
       "INSERT INTO revinfo (rev, revtstmp) VALUES (:rev, :revtstmp)",
       mapOf("rev" to rev, "revtstmp" to staleRevisionTs),
@@ -169,24 +176,13 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
 
     if (includeLiveData) {
       jdbcTemplate.update(
-        "INSERT INTO caseloads (caseload_id, name, function, active, administration_caseload, user_assignable, created_timestamp, created_by) VALUES (:caseloadId, :name, :function, true, true, true, :createdTimestamp, :createdBy)",
-        mapOf(
-          "caseloadId" to "STL1",
-          "name" to "Stale Caseload",
-          "function" to "General",
-          "createdTimestamp" to staleTimestamp,
-          "createdBy" to "test",
-        ),
-      )
-
-      jdbcTemplate.update(
         "INSERT INTO user_account (user_id, username, account_type, account_status, active_caseload_id, created_timestamp, created_by) VALUES (:userId, :username, :accountType, :accountStatus, :activeCaseloadId, :createdTimestamp, :createdBy)",
         mapOf(
           "userId" to userId,
           "username" to username,
           "accountType" to "GENERAL",
           "accountStatus" to "OPEN",
-          "activeCaseloadId" to "STL1",
+          "activeCaseloadId" to caseloadId,
           "createdTimestamp" to staleTimestamp,
           "createdBy" to "test",
         ),
@@ -260,7 +256,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "INSERT INTO user_accessible_caseloads (username, caseload_id, created_timestamp, created_by) VALUES (:username, :caseloadId, :createdTimestamp, :createdBy)",
         mapOf(
           "username" to username,
-          "caseloadId" to "STL1",
+          "caseloadId" to caseloadId,
           "createdTimestamp" to staleTimestamp,
           "createdBy" to "test",
         ),
@@ -270,7 +266,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       "INSERT INTO user_accessible_caseloads_audit (username, caseload_id, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
-        "caseloadId" to "STL1",
+        "caseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
@@ -283,7 +279,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "INSERT INTO user_caseload_administrators (username, caseload_id, active, created_timestamp, created_by) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy)",
         mapOf(
           "username" to username,
-          "caseloadId" to "STL1",
+          "caseloadId" to caseloadId,
           "createdTimestamp" to staleTimestamp,
           "createdBy" to "test",
         ),
@@ -293,7 +289,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       "INSERT INTO user_caseload_administrators_audit (username, caseload_id, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
-        "caseloadId" to "STL1",
+          "caseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
@@ -306,7 +302,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "INSERT INTO user_caseload_members (username, caseload_id, active, created_timestamp, created_by) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy)",
         mapOf(
           "username" to username,
-          "caseloadId" to "STL1",
+          "caseloadId" to caseloadId,
           "createdTimestamp" to staleTimestamp,
           "createdBy" to "test",
         ),
@@ -316,7 +312,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       "INSERT INTO user_caseload_members_audit (username, caseload_id, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
-        "caseloadId" to "STL1",
+          "caseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
@@ -336,6 +332,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     emptyMap<String, Any?>(),
     Long::class.java,
   ) ?: 1L
+
 
   private fun countRows(tableName: String, columnName: String, value: Any): Int = jdbcTemplate.queryForObject(
     "SELECT COUNT(*) FROM $tableName WHERE $columnName = :value",
