@@ -289,7 +289,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       "INSERT INTO user_caseload_administrators_audit (username, caseload_id, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
-          "caseloadId" to caseloadId,
+        "caseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
@@ -312,7 +312,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       "INSERT INTO user_caseload_members_audit (username, caseload_id, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
-          "caseloadId" to caseloadId,
+        "caseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
@@ -332,7 +332,6 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     emptyMap<String, Any?>(),
     Long::class.java,
   ) ?: 1L
-
 
   private fun countRows(tableName: String, columnName: String, value: Any): Int = jdbcTemplate.queryForObject(
     "SELECT COUNT(*) FROM $tableName WHERE $columnName = :value",
