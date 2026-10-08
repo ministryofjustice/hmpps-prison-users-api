@@ -82,17 +82,18 @@ class UserCleanupService(
       jdbcTemplate.update("DELETE FROM user_caseload_members_audit WHERE username IN (:usernames)", mapOf("usernames" to usernameList))
     }
 
-    deleteOrphanedRevinfo()
+    deleteOrphanedRevisionInfo()
   }
 
-  private fun deleteOrphanedRevinfo() {
+  private fun deleteOrphanedRevisionInfo() {
     val referencedRevisions = findReferencedRevisions()
-    if (referencedRevisions.isEmpty()) {
-      jdbcTemplate.update("DELETE FROM revinfo", emptyMap<String, Any?>())
-    } else {
+    if (referencedRevisions.isNotEmpty()) {
+      val maxReferencedRevision = referencedRevisions.maxOrNull()!!
+      // Only delete orphaned revisions that are less than the max referenced revision.
+      // This prevents concurrent revisions created during cleanup from being deleted.
       jdbcTemplate.update(
-        "DELETE FROM revinfo WHERE rev NOT IN (:revisions)",
-        mapOf("revisions" to referencedRevisions),
+        "DELETE FROM revinfo WHERE rev < :maxReferencedRevision AND rev NOT IN (:revisions)",
+        mapOf("maxReferencedRevision" to maxReferencedRevision, "revisions" to referencedRevisions),
       )
     }
   }
