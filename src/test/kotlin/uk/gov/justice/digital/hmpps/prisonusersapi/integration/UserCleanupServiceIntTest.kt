@@ -1,17 +1,22 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.integration
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+import org.springframework.test.annotation.DirtiesContext
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserCleanupService
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.UUID
 
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserCleanupServiceIntTest : IntegrationTestBase() {
+
+  private val cleanupLockName = "UserCleanupService.runMonthlyCleanup"
 
   private val insertedRevisionIds = mutableSetOf<Long>()
 
@@ -21,8 +26,14 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   @Autowired
   private lateinit var jdbcTemplate: NamedParameterJdbcTemplate
 
+  @BeforeEach
+  fun setUp() {
+    jdbcTemplate.update("DELETE FROM scheduled_job_lock WHERE name = :name", mapOf("name" to cleanupLockName))
+  }
+
   @AfterEach
   fun tearDown() {
+    jdbcTemplate.update("DELETE FROM scheduled_job_lock WHERE name = :name", mapOf("name" to cleanupLockName))
     jdbcTemplate.update("DELETE FROM user_caseload_members_audit", emptyMap<String, Any?>())
     jdbcTemplate.update("DELETE FROM user_caseload_administrators_audit", emptyMap<String, Any?>())
     jdbcTemplate.update("DELETE FROM user_accessible_caseloads_audit", emptyMap<String, Any?>())
@@ -196,7 +207,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "userId" to userId,
         "accountType" to "GENERAL",
         "accountStatus" to "OPEN",
-        "activeCaseloadId" to "STL1",
+        "activeCaseloadId" to caseloadId,
         "createdTimestamp" to staleTimestamp,
         "createdBy" to "test",
         "rev" to rev,
