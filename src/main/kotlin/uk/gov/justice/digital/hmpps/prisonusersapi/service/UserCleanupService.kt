@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
@@ -15,6 +16,7 @@ class UserCleanupService(
 ) {
 
   @Scheduled(cron = "0 0 0 1 * *")
+  @SchedulerLock(name = "UserCleanupService.runMonthlyCleanup")
   @Transactional
   fun runMonthlyCleanup() {
     val staleUserIds = findStaleUserIds()
