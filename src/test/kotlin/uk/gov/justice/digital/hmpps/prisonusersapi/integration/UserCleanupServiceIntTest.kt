@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.TestPropertySource
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserCleanupService
 import java.time.Instant
@@ -14,9 +15,10 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@TestPropertySource(properties = ["user-cleanup.batch-size=2"])
 class UserCleanupServiceIntTest : IntegrationTestBase() {
 
-  private val cleanupLockName = "UserCleanupService.runMonthlyCleanup"
+  private val cleanupLockName = "UserCleanupService.cleanup"
 
   private val insertedRevisionIds = mutableSetOf<Long>()
 
@@ -56,12 +58,12 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   }
 
   @Test
-  fun `runMonthlyCleanup removes stale inactive user audit data and associated user records`() {
+  fun `cleanup removes stale inactive user audit data and associated user records`() {
     val userId = UUID.randomUUID()
     val username = "stale-user-inactive"
     insertStaleUser(userId, username, UserStatus.INACTIVE)
 
-    userCleanupService.runMonthlyCleanup()
+    userCleanupService.cleanup()
 
     assertThat(countRows("users", "user_id", userId)).isZero()
     assertThat(countRows("user_account", "username", username)).isZero()
@@ -81,12 +83,12 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   }
 
   @Test
-  fun `runMonthlyCleanup ignores stale users that are not inactive`() {
+  fun `cleanup ignores stale users that are not inactive`() {
     val userId = UUID.randomUUID()
     val username = "active-stale-user"
     insertStaleUser(userId, username, UserStatus.ACTIVE)
 
-    userCleanupService.runMonthlyCleanup()
+    userCleanupService.cleanup()
 
     assertThat(countRows("users", "user_id", userId)).isEqualTo(1)
     assertThat(countRows("user_account", "username", username)).isEqualTo(1)
@@ -114,12 +116,12 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   }
 
   @Test
-  fun `runMonthlyCleanup removes stale inactive audit data when live rows are already absent`() {
+  fun `cleanup removes stale inactive audit data when live rows are already absent`() {
     val userId = UUID.randomUUID()
     val username = "stale-audit-only-user"
     insertStaleUser(userId, username, UserStatus.INACTIVE, includeLiveData = false)
 
-    userCleanupService.runMonthlyCleanup()
+    userCleanupService.cleanup()
 
     assertThat(countRows("users", "user_id", userId)).isZero()
     assertThat(countRows("user_account", "username", username)).isZero()
@@ -136,6 +138,34 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     assertThat(countAuditRows("user_accessible_caseloads_audit", "username", username)).isZero()
     assertThat(countAuditRows("user_caseload_administrators_audit", "username", username)).isZero()
     assertThat(countAuditRows("user_caseload_members_audit", "username", username)).isZero()
+  }
+
+  @Test
+  fun `cleanup processes stale inactive users across multiple batches`() {
+    val staleUsers = (1..5).map { index ->
+      UUID.randomUUID() to "batched-stale-user-$index"
+    }
+    staleUsers.forEach { (userId, username) ->
+      insertStaleUser(userId, username, UserStatus.INACTIVE)
+    }
+
+    val activeUserId = UUID.randomUUID()
+    val activeUsername = "batched-active-user"
+    insertStaleUser(activeUserId, activeUsername, UserStatus.ACTIVE)
+
+    userCleanupService.cleanup()
+
+    staleUsers.forEach { (userId, username) ->
+      assertThat(countRows("users", "user_id", userId)).isZero()
+      assertThat(countRows("user_account", "username", username)).isZero()
+      assertThat(countAuditRows("users_audit", "user_id", userId)).isZero()
+      assertThat(countAuditRows("user_account_audit", "user_id", userId)).isZero()
+    }
+
+    assertThat(countRows("users", "user_id", activeUserId)).isEqualTo(1)
+    assertThat(countRows("user_account", "username", activeUsername)).isEqualTo(1)
+    assertThat(countAuditRows("users_audit", "user_id", activeUserId)).isEqualTo(1)
+    assertThat(countAuditRows("user_account_audit", "user_id", activeUserId)).isEqualTo(1)
   }
 
   private fun insertStaleUser(
