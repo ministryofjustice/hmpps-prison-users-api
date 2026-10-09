@@ -116,6 +116,39 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   }
 
   @Test
+  fun `cleanup ignores inactive users whose latest audit revision is newer than seven years`() {
+    val userId = UUID.randomUUID()
+    val username = "recent-inactive-user"
+    insertStaleUser(userId, username, UserStatus.INACTIVE, revisionAgeYears = 6)
+
+    userCleanupService.cleanup()
+
+    assertThat(countRows("users", "user_id", userId)).isEqualTo(1)
+    assertThat(countRows("user_account", "username", username)).isEqualTo(1)
+    assertThat(countRows("user_emails", "user_id", userId)).isEqualTo(1)
+    assertThat(countRows("user_roles", "username", username)).isEqualTo(1)
+    assertThat(countRows("user_accessible_caseloads", "username", username)).isEqualTo(1)
+    assertThat(countRows("user_caseload_administrators", "username", username)).isEqualTo(1)
+    assertThat(countRows("user_caseload_members", "username", username)).isEqualTo(1)
+
+    assertThat(
+      jdbcTemplate.queryForObject(
+        "SELECT status FROM users WHERE user_id = :userId",
+        mapOf("userId" to userId),
+        String::class.java,
+      ),
+    ).isEqualTo(UserStatus.INACTIVE.name)
+
+    assertThat(countAuditRows("users_audit", "user_id", userId)).isEqualTo(1)
+    assertThat(countAuditRows("user_account_audit", "user_id", userId)).isEqualTo(1)
+    assertThat(countAuditRows("user_emails_audit", "user_id", userId)).isEqualTo(1)
+    assertThat(countAuditRows("user_roles_audit", "username", username)).isEqualTo(1)
+    assertThat(countAuditRows("user_accessible_caseloads_audit", "username", username)).isEqualTo(1)
+    assertThat(countAuditRows("user_caseload_administrators_audit", "username", username)).isEqualTo(1)
+    assertThat(countAuditRows("user_caseload_members_audit", "username", username)).isEqualTo(1)
+  }
+
+  @Test
   fun `cleanup removes stale inactive audit data when live rows are already absent`() {
     val userId = UUID.randomUUID()
     val username = "stale-audit-only-user"
@@ -173,16 +206,17 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
     username: String,
     status: UserStatus,
     includeLiveData: Boolean = true,
+    revisionAgeYears: Long = 8,
   ) {
-    val staleRevisionTs = Instant.now().minusSeconds(8L * 365 * 24 * 60 * 60).toEpochMilli()
-    val staleTimestamp = LocalDateTime.now().minusSeconds(8L * 365 * 24 * 60 * 60)
+    val revisionTs = Instant.now().minusSeconds(revisionAgeYears * 365 * 24 * 60 * 60).toEpochMilli()
+    val entityTimestamp = LocalDateTime.now().minusYears(revisionAgeYears)
     val rev = nextRevisionNumber()
     val caseloadId = "LEI"
     val auditEmailId = nextAuditEmailId()
     insertedRevisionIds.add(rev)
     jdbcTemplate.update(
       "INSERT INTO revinfo (rev, revtstmp) VALUES (:rev, :revtstmp)",
-      mapOf("rev" to rev, "revtstmp" to staleRevisionTs),
+      mapOf("rev" to rev, "revtstmp" to revisionTs),
     )
 
     if (includeLiveData) {
@@ -194,7 +228,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
           "lastName" to "User",
           "status" to status.name,
           "legacyStaffId" to 100000L + userId.leastSignificantBits,
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -208,7 +242,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "lastName" to "User",
         "status" to status.name,
         "legacyStaffId" to 100000L + userId.leastSignificantBits,
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -224,7 +258,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
           "accountType" to "GENERAL",
           "accountStatus" to "OPEN",
           "activeCaseloadId" to caseloadId,
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -238,7 +272,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "accountType" to "GENERAL",
         "accountStatus" to "OPEN",
         "activeCaseloadId" to caseloadId,
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -251,7 +285,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         mapOf(
           "userId" to userId,
           "email" to "$username@example.org",
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -262,7 +296,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         "id" to auditEmailId,
         "userId" to userId,
         "email" to "$username@example.org",
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -275,7 +309,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         mapOf(
           "username" to username,
           "roleCode" to "ROLE_STALE",
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -285,7 +319,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       mapOf(
         "username" to username,
         "roleCode" to "ROLE_STALE",
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -298,7 +332,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         mapOf(
           "username" to username,
           "caseloadId" to caseloadId,
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -308,7 +342,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       mapOf(
         "username" to username,
         "caseloadId" to caseloadId,
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -321,7 +355,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         mapOf(
           "username" to username,
           "caseloadId" to caseloadId,
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -331,7 +365,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       mapOf(
         "username" to username,
         "caseloadId" to caseloadId,
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
@@ -344,7 +378,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
         mapOf(
           "username" to username,
           "caseloadId" to caseloadId,
-          "createdTimestamp" to staleTimestamp,
+          "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
@@ -354,7 +388,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
       mapOf(
         "username" to username,
         "caseloadId" to caseloadId,
-        "createdTimestamp" to staleTimestamp,
+        "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
         "revType" to 0,
