@@ -14,6 +14,8 @@ dependencies {
 
   implementation("org.springframework.boot:spring-boot-starter-flyway")
   implementation("org.flywaydb:flyway-core")
+  implementation("net.javacrumbs.shedlock:shedlock-spring:7.9.0")
+  implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.9.0")
   implementation("org.apache.commons:commons-text:1.15.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
   implementation("org.hibernate.orm:hibernate-envers")

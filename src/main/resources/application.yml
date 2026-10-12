@@ -94,3 +94,6 @@ sync:
     retry-backoff-ms: 50
     max-wait-ms: 5000
 
+user-cleanup:
+  batch-size: 100
+
