@@ -20,7 +20,7 @@
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/` (base migrations) and `src/main/resources/db/prison-users_postgresql/` (PostgreSQL-specific migrations, e.g. partial indexes).
 
 ## Local run / build / test
-- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.8. `hmpps-kotlin-spring-boot-starter` is 3.0.1, with `hmpps-kotlin-spring-boot-starter-test` at 3.0.1. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.1.1; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.46.
+- **Build tooling**: Kotlin, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.8. `hmpps-kotlin-spring-boot-starter` is 3.0.1, with `hmpps-kotlin-spring-boot-starter-test` at 3.0.1. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.1.1; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.46.
 - Build the jar: `./gradlew clean assemble`
 - Build the Docker image locally by assembling first, copying `build/libs/*.jar` into the repository root, then running `docker build --build-arg GIT_REF=... --build-arg GIT_BRANCH=... --build-arg BUILD_NUMBER=... .`; the container expects `HMPPS_AUTH_URL` when started.
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
@@ -29,7 +29,7 @@
 - Run tests with `./gradlew test`; integration tests use `@SpringBootTest` + `WebTestClient`, not MockMvc.
 - Run a single test class: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest"`
 - Run a single test method: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest.should return 404 when user not found"`
-- Lint/format with ktlint: `./gradlew ktlintCheck` (check only) or `./gradlew ktlintFormat` (auto-fix).
+- Ktlint Gradle tasks are not used in this repository. Do not run `ktlintCheck`, `ktlintFormat`, or any other ktlint Gradle task.
 
 ## Project-specific conventions
 - Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it (except allowlisted endpoints such as `GET /reference-data/caseloads` which is public and returns non-sensitive reference data, and Swagger/error paths).
