@@ -3,9 +3,11 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadDetail
@@ -41,6 +43,16 @@ class UserService(
     val userAccount = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
     return userAccount.toUserDetail()
+  }
+
+  fun unlockUser(username: String) {
+    val userAccount = userAccountRepository.findById(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+
+    userAccount.user.status = UserStatus.ACTIVE
+    userAccount.accountStatus = AccountStatus.OPEN
+
+    // TODO raise user-unlocked domain event to notify other services that the user has been unlocked
   }
 
   companion object {

@@ -38,7 +38,7 @@ data class User(
 
   val firstName: String,
   val lastName: String,
-  val status: UserStatus,
+  var status: UserStatus,
   val legacyStaffId: Long,
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
