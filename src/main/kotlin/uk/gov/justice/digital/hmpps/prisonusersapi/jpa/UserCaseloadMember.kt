@@ -35,7 +35,7 @@ data class UserCaseloadMember(
   @NotAudited
   val userAccount: UserAccount,
 
-  val startDate: LocalDate? = null,
+  val startDate: LocalDate,
   val expiryDate: LocalDate? = null,
   val active: Boolean? = null,
   val createdBy: String,
