@@ -12,7 +12,6 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
-import java.time.LocalDate
 
 fun User.toPrisonUserReconciliationResponse(
   accounts: List<UserAccount>,
@@ -84,7 +83,7 @@ fun User.toPrisonUserReconciliationResponse(
           ReconciliationUserCaseloadMember(
             caseloadId = memberCaseload.id.caseloadId,
             active = memberCaseload.active ?: false,
-            startDate = memberCaseload.startDate ?: LocalDate.MIN,
+            startDate = memberCaseload.startDate,
             expiryDate = memberCaseload.expiryDate,
             createdTimestamp = memberCaseload.createdTimestamp,
             createdBy = memberCaseload.createdBy,
