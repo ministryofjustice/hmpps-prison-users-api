@@ -5,13 +5,20 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUse
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserReconciliationResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserRole
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.ReconciliationUserCaseloadAdministrator
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.ReconciliationUserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministrator
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
+import java.time.LocalDate
 
 fun User.toPrisonUserReconciliationResponse(
   accounts: List<UserAccount>,
   userRolesByUsername: Map<String, List<UserRole>>,
+  userAdministrationCaseloadsByUsername: Map<String, List<UserCaseloadAdministrator>> = emptyMap(),
+  userMemberCaseloadsByUsername: Map<String, List<UserCaseloadMember>> = emptyMap(),
 ): PrisonUserReconciliationResponse = PrisonUserReconciliationResponse(
   userId = requireNotNull(userId),
   staffId = legacyStaffId,
@@ -58,6 +65,33 @@ fun User.toPrisonUserReconciliationResponse(
         },
       activeCaseloadId = account.activeCaseload?.id,
       lastLoggedIn = account.lastLoggedIn,
+      administrationCaseloads = userAdministrationCaseloadsByUsername[account.username].orEmpty()
+        .sortedBy { it.id.caseloadId }
+        .map { adminCaseload ->
+          ReconciliationUserCaseloadAdministrator(
+            caseloadId = adminCaseload.id.caseloadId,
+            active = adminCaseload.active ?: false,
+            expiryDate = adminCaseload.expiryDate,
+            createdTimestamp = adminCaseload.createdTimestamp,
+            createdBy = adminCaseload.createdBy,
+            modifiedTimestamp = adminCaseload.modifiedTimestamp,
+            modifiedBy = adminCaseload.modifiedBy,
+          )
+        },
+      memberCaseloads = userMemberCaseloadsByUsername[account.username].orEmpty()
+        .sortedBy { it.id.caseloadId }
+        .map { memberCaseload ->
+          ReconciliationUserCaseloadMember(
+            caseloadId = memberCaseload.id.caseloadId,
+            active = memberCaseload.active ?: false,
+            startDate = memberCaseload.startDate ?: LocalDate.MIN,
+            expiryDate = memberCaseload.expiryDate,
+            createdTimestamp = memberCaseload.createdTimestamp,
+            createdBy = memberCaseload.createdBy,
+            modifiedTimestamp = memberCaseload.modifiedTimestamp,
+            modifiedBy = memberCaseload.modifiedBy,
+          )
+        },
       createdTimestamp = account.createdTimestamp,
       createdBy = account.createdBy,
       modifiedTimestamp = account.modifiedTimestamp,
