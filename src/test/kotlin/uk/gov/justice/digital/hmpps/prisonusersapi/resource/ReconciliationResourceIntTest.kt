@@ -14,9 +14,12 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserAccou
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadAdministrator
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -59,6 +62,13 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
                 userRole(roleCode = "ROLE_ALPHA"),
                 userRole(roleCode = "ROLE_BRAVO"),
               ),
+              administrationCaseloads = listOf(
+                userCaseloadAdministrator(caseloadId = "LEI", active = true, expiryDate = LocalDate.of(2026, 1, 1)),
+                userCaseloadAdministrator(caseloadId = "MDI", active = false),
+              ),
+              memberCaseloads = listOf(
+                userCaseloadMember(caseloadId = "MDI", active = true, startDate = LocalDate.of(2025, 1, 1)),
+              ),
             ),
             userAccount(
               username = "RECON_USER_2",
@@ -68,6 +78,12 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
               ),
               roles = listOf(
                 userRole(roleCode = "ROLE_CHARLIE"),
+              ),
+              administrationCaseloads = listOf(
+                userCaseloadAdministrator(caseloadId = "MDI", active = true),
+              ),
+              memberCaseloads = listOf(
+                userCaseloadMember(caseloadId = "MDI", active = false, startDate = LocalDate.of(2024, 5, 5), expiryDate = LocalDate.of(2025, 12, 31)),
               ),
             ),
           ),
@@ -135,13 +151,31 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
         .jsonPath("accounts[0].caseloads.length()").isEqualTo(2)
         .jsonPath("accounts[0].caseloads[0].caseloadId").isEqualTo("LEI")
         .jsonPath("accounts[0].caseloads[1].caseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[0].administrationCaseloads.length()").isEqualTo(2)
+        .jsonPath("accounts[0].administrationCaseloads[0].caseloadId").isEqualTo("LEI")
+        .jsonPath("accounts[0].administrationCaseloads[0].active").isEqualTo(true)
+        .jsonPath("accounts[0].administrationCaseloads[1].caseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[0].administrationCaseloads[1].active").isEqualTo(false)
+        .jsonPath("accounts[0].memberCaseloads.length()").isEqualTo(1)
+        .jsonPath("accounts[0].memberCaseloads[0].caseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[0].memberCaseloads[0].startDate").isEqualTo("2025-01-01")
         .jsonPath("accounts[1].username").isEqualTo("RECON_USER_2")
         .jsonPath("accounts[1].roles[0].roleCode").isEqualTo("ROLE_CHARLIE")
         .jsonPath("accounts[1].activeCaseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[1].administrationCaseloads[0].caseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[1].memberCaseloads[0].caseloadId").isEqualTo("MDI")
+        .jsonPath("accounts[1].memberCaseloads[0].active").isEqualTo(false)
     }
   }
 
-  private fun userAccount(username: String, activeCaseloadId: String, caseloads: List<SyncPrisonUserCaseload> = listOf(), roles: List<SyncPrisonUserRole> = listOf()) = SyncPrisonUserAccount(
+  private fun userAccount(
+    username: String,
+    activeCaseloadId: String,
+    caseloads: List<SyncPrisonUserCaseload> = listOf(),
+    roles: List<SyncPrisonUserRole> = listOf(),
+    administrationCaseloads: List<SyncUserCaseloadAdministrator> = listOf(),
+    memberCaseloads: List<SyncUserCaseloadMember> = listOf(),
+  ) = SyncPrisonUserAccount(
     username = username,
     accountType = UsageType.GENERAL,
     accountStatus = AccountStatus.OPEN,
@@ -151,6 +185,8 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
     createdBy = "MIGRATION_TEST",
     caseloads = caseloads,
     roles = roles,
+    administrationCaseloads = administrationCaseloads,
+    memberCaseloads = memberCaseloads,
   )
 
   private fun syncPrisonUserEmail(email: String) = SyncPrisonUserEmail(
@@ -167,6 +203,32 @@ class ReconciliationResourceIntTest : IntegrationTestBase() {
 
   private fun userRole(roleCode: String) = SyncPrisonUserRole(
     roleCode = roleCode,
+    createdTimestamp = LocalDateTime.now(),
+    createdBy = "MIGRATION_TEST",
+  )
+
+  private fun userCaseloadAdministrator(
+    caseloadId: String,
+    active: Boolean,
+    expiryDate: LocalDate? = null,
+  ) = SyncUserCaseloadAdministrator(
+    caseloadId = caseloadId,
+    active = active,
+    expiryDate = expiryDate,
+    createdTimestamp = LocalDateTime.now(),
+    createdBy = "MIGRATION_TEST",
+  )
+
+  private fun userCaseloadMember(
+    caseloadId: String,
+    active: Boolean,
+    startDate: LocalDate,
+    expiryDate: LocalDate? = null,
+  ) = SyncUserCaseloadMember(
+    caseloadId = caseloadId,
+    active = active,
+    startDate = startDate,
+    expiryDate = expiryDate,
     createdTimestamp = LocalDateTime.now(),
     createdBy = "MIGRATION_TEST",
   )

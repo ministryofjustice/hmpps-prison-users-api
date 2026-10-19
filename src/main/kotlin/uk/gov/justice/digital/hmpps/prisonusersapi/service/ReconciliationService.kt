@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserReconciliationResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserRoleRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toPrisonUserReconciliationResponse
@@ -14,6 +16,8 @@ class ReconciliationService(
   private val usersRepository: UsersRepository,
   private val userAccountRepository: UserAccountRepository,
   private val userRoleRepository: UserRoleRepository,
+  private val userCaseloadAdministratorRepository: UserCaseloadAdministratorRepository,
+  private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
 ) {
   fun getPrisonUserForReconciliation(legacyStaffId: Long): PrisonUserReconciliationResponse {
     val user = usersRepository.findByLegacyStaffId(legacyStaffId)
@@ -22,7 +26,14 @@ class ReconciliationService(
     val userAccounts = userAccountRepository.findAllByUserUserId(requireNotNull(user.userId))
     val usernames = userAccounts.map { it.username }
     val userRolesByUsername = if (usernames.isEmpty()) emptyMap() else userRoleRepository.findAllByIdUsernameIn(usernames).groupBy { it.id.username }
+    val userAdministrationCaseloadsByUsername = if (usernames.isEmpty()) emptyMap() else userCaseloadAdministratorRepository.findAllByIdUsernameIn(usernames).groupBy { it.id.username }
+    val userMemberCaseloadsByUsername = if (usernames.isEmpty()) emptyMap() else userCaseloadMemberRepository.findAllByIdUsernameIn(usernames).groupBy { it.id.username }
 
-    return user.toPrisonUserReconciliationResponse(userAccounts, userRolesByUsername)
+    return user.toPrisonUserReconciliationResponse(
+      userAccounts,
+      userRolesByUsername,
+      userAdministrationCaseloadsByUsername,
+      userMemberCaseloadsByUsername,
+    )
   }
 }

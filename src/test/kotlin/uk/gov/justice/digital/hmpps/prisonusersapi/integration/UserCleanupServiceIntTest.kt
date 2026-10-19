@@ -210,6 +210,7 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
   ) {
     val revisionTs = Instant.now().minusSeconds(revisionAgeYears * 365 * 24 * 60 * 60).toEpochMilli()
     val entityTimestamp = LocalDateTime.now().minusYears(revisionAgeYears)
+    val startDate = entityTimestamp.toLocalDate()
     val rev = nextRevisionNumber()
     val caseloadId = "LEI"
     val auditEmailId = nextAuditEmailId()
@@ -374,20 +375,22 @@ class UserCleanupServiceIntTest : IntegrationTestBase() {
 
     if (includeLiveData) {
       jdbcTemplate.update(
-        "INSERT INTO user_caseload_members (username, caseload_id, active, created_timestamp, created_by) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy)",
+        "INSERT INTO user_caseload_members (username, caseload_id, start_date, active, created_timestamp, created_by) VALUES (:username, :caseloadId, :startDate, true, :createdTimestamp, :createdBy)",
         mapOf(
           "username" to username,
           "caseloadId" to caseloadId,
+          "startDate" to startDate,
           "createdTimestamp" to entityTimestamp,
           "createdBy" to "test",
         ),
       )
     }
     jdbcTemplate.update(
-      "INSERT INTO user_caseload_members_audit (username, caseload_id, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, true, :createdTimestamp, :createdBy, :rev, :revType)",
+      "INSERT INTO user_caseload_members_audit (username, caseload_id, start_date, active, created_timestamp, created_by, rev, revtype) VALUES (:username, :caseloadId, :startDate, true, :createdTimestamp, :createdBy, :rev, :revType)",
       mapOf(
         "username" to username,
         "caseloadId" to caseloadId,
+        "startDate" to startDate,
         "createdTimestamp" to entityTimestamp,
         "createdBy" to "test",
         "rev" to rev,
