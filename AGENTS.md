@@ -20,7 +20,7 @@
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/` (base migrations) and `src/main/resources/db/prison-users_postgresql/` (PostgreSQL-specific migrations, e.g. partial indexes).
 
 ## Local run / build / test
-- **Build tooling**: Kotlin 2.4.10, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.8. `hmpps-kotlin-spring-boot-starter` is 3.0.1, with `hmpps-kotlin-spring-boot-starter-test` at 3.0.1. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.1.1; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.46.
+- **Build tooling**: Kotlin, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.8. `hmpps-kotlin-spring-boot-starter` is 3.0.1, with `hmpps-kotlin-spring-boot-starter-test` at 3.0.1. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.1.1; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.46.
 - Build the jar: `./gradlew clean assemble`
 - Build the Docker image locally by assembling first, copying `build/libs/*.jar` into the repository root, then running `docker build --build-arg GIT_REF=... --build-arg GIT_BRANCH=... --build-arg BUILD_NUMBER=... .`; the container expects `HMPPS_AUTH_URL` when started.
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
@@ -29,7 +29,7 @@
 - Run tests with `./gradlew test`; integration tests use `@SpringBootTest` + `WebTestClient`, not MockMvc.
 - Run a single test class: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest"`
 - Run a single test method: `./gradlew test --tests "uk.gov.justice.digital.hmpps.prisonusersapi.resource.UserResourceIntTest.should return 404 when user not found"`
-- Lint/format with ktlint: `./gradlew ktlintCheck` (check only) or `./gradlew ktlintFormat` (auto-fix).
+- Ktlint Gradle tasks are not used in this repository. Do not run `ktlintCheck`, `ktlintFormat`, or any other ktlint Gradle task.
 
 ## Project-specific conventions
 - Every API method is expected to carry explicit `@PreAuthorize`; `src/test/kotlin/.../integration/ResourceSecurityTest.kt` fails if an endpoint is missing it (except allowlisted endpoints such as `GET /reference-data/caseloads` which is public and returns non-sensitive reference data, and Swagger/error paths).
@@ -57,3 +57,24 @@
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
 - For broader HMPPS Kotlin conventions, see the "Common Kotlin patterns" section in `README.md` and the linked tech docs; the project is community managed via `#kotlin-dev`.
 - If you add endpoints, remember there are tests asserting security coverage and OpenAPI availability/validity (`integration/ResourceSecurityTest.kt`, `integration/OpenApiDocsTest.kt`).
+
+## Dependency injection
+
+Prefer constructor injection over field injection in Spring components, including test classes.
+
+- In production code, declare dependencies as constructor parameters (e.g. `private val fooRepository: FooRepository`) rather than using `@Autowired` on a field.
+- In integration test classes, pass `@Autowired` repositories/beans as primary constructor parameters instead of using `@Autowired` on a `lateinit var` field.
+
+## Tests
+
+Prefer `@BeforeAll`/`@AfterAll` over `@BeforeEach`/`@AfterEach` where possible in nested integration test classes.
+
+- Use `@TestInstance(TestInstance.Lifecycle.PER_CLASS)` on the nested test class so that `@BeforeAll`/`@AfterAll` can be non-static (instance) methods.
+- Build shared fixture data once in `@BeforeAll` and clean it up once in `@AfterAll`, rather than rebuilding it before every test, when the fixture is not mutated in a way that would leak between tests.
+- When copying or adapting an integration test, preserve the full nested test structure, including `Security`, `Validation`, and `HappyPath` scenarios for each endpoint.
+- Place each `@AfterAll` method immediately after the corresponding `@BeforeAll` setup method.
+- OAuth2 propagation tests must verify the exact WireMock header value with `equalTo("Bearer ABCDE")`; do not weaken this assertion to a regex or non-empty-header matcher.
+
+## Linting
+
+Do not run `ktlintCheck` (or any ktlint gradle task) in this repository. Skip ktlint validation entirely.
