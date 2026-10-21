@@ -3,6 +3,8 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.jpa
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
@@ -38,7 +40,10 @@ data class User(
 
   val firstName: String,
   val lastName: String,
+
+  @Enumerated(EnumType.STRING)
   val status: UserStatus,
+
   val legacyStaffId: Long,
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
