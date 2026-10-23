@@ -42,7 +42,7 @@ data class User(
   val lastName: String,
 
   @Enumerated(EnumType.STRING)
-  val status: UserStatus,
+  var status: UserStatus,
 
   val legacyStaffId: Long,
   val createdTimestamp: LocalDateTime,
