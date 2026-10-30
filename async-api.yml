@@ -1,0 +1,43 @@
+asyncapi: 3.0.0
+info:
+  title: HMPPS Prison Users API
+  version: 1.0.0
+  description: API to add / remove / change Prison Users
+
+servers:
+  development:
+    host: "hmpps-domain-events-dev.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Development Environment
+  preproduction:
+    host: "hmpps-domain-events-preprod.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Pre-production Environment
+  production:
+    host: "hmpps-domain-events-prod.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Production Environment
+
+components:
+  messages:
+    prison-user-api.user.unlocked:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/prison-users/user-unlocked.yaml
+
+
+channels:
+  hmpps-domain-events:
+    description: HMPPS domain events SNS topic
+    bindings:
+      sns:
+        name: domainevents
+    messages:
+      prison-user-api.user.unlocked:
+        $ref: '#/components/messages/prison-user-api.user.unlocked'
+
+operations:
+  publish-event:
+    action: send
+    channel:
+      $ref: '#/channels/hmpps-domain-events'
+    messages:
+      - $ref: '#/channels/hmpps-domain-events/messages/prison-user-api.user.unlocked'
