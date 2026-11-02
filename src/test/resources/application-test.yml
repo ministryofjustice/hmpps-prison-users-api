@@ -13,3 +13,18 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+hmpps.sqs:
+  provider: localstack
+  queues:
+    test:
+      queueName: ${random.uuid}
+      dlqName: ${random.uuid}
+      subscribeTopicId: domainevents
+      subscribeFilter: >-
+        {"eventType": [
+          {"prefix": "user.account."}
+        ]}
+  topics:
+    domainevents:
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}

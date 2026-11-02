@@ -16,47 +16,48 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 
 @RestController
 @Validated
 @RequestMapping("/users", produces = [MediaType.APPLICATION_JSON_VALUE])
-class UserManagementResource {
+class UserManagementResource(private val userService: UserService) {
 
-    @PreAuthorize("hasRole('ROLE_MANAGE_NOMIS_USER_ACCOUNT')")
-    @PutMapping("/{username}/unlock-user")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(
-        summary = "Unlock user account",
-        description = "Unlocks the user account. Requires role ROLE_MANAGE_NOMIS_USER_ACCOUNT",
-        security = [SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT")],
-        responses = [
-            ApiResponse(
-                responseCode = "200",
-                description = "User account unlocked",
-            ),
-            ApiResponse(
-                responseCode = "400",
-                description = "Incorrect request to unlock user",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "401",
-                description = "Unauthorized to access this endpoint",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "403",
-                description = "Incorrect permissions to unlock a user",
-                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-            ),
-        ],
-    )
-    fun unlockUser(
-        @Schema(description = "Username", example = "testuser1", required = true)
-        @PathVariable
-        @Size(max = 30, min = 1, message = "username must be between 1 and 30")
-        username: String,
-    ) {
-
-    }
+  @PreAuthorize("hasRole('ROLE_MANAGE_NOMIS_USER_ACCOUNT')")
+  @PutMapping("/{username}/unlock-user")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Unlock user account",
+    description = "Unlocks the user account. Requires role ROLE_MANAGE_NOMIS_USER_ACCOUNT",
+    security = [SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT")],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User account unlocked",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Incorrect request to unlock user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to unlock a user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun unlockUser(
+    @Schema(description = "Username", example = "testuser1", required = true)
+    @PathVariable
+    @Size(max = 30, min = 1, message = "username must be between 1 and 30")
+    username: String,
+  ) {
+    userService.unlockUser(username)
+  }
 }

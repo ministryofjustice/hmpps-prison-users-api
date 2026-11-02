@@ -18,6 +18,7 @@ import java.util.function.Supplier
 @Transactional
 class UserService(
   private val userAccountRepository: UserAccountRepository,
+  private val eventPublishService: EventPublishService,
 ) {
 
   @Transactional(readOnly = true)
@@ -52,7 +53,14 @@ class UserService(
     userAccount.user.status = UserStatus.ACTIVE
     userAccount.accountStatus = AccountStatus.OPEN
 
-    // TODO raise user-unlocked domain event to notify other services that the user has been unlocked
+    eventPublishService.publishEvent(
+      eventType = PrisonUserDomainEventType.USER_ACCOUNT_UNLOCKED,
+      additionalInformation = AdditionalInformation(
+        userId = userAccount.user.userId!!,
+        legacyStaffId = userAccount.user.legacyStaffId,
+        username = userAccount.username,
+      ),
+    )
   }
 
   companion object {
