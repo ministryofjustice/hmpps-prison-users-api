@@ -2,7 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
 import org.springframework.stereotype.Service
 import java.time.Clock
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 @Service
 class EventPublishService(
@@ -24,7 +24,7 @@ class EventPublishService(
     snsService.publishDomainEvent(
       eventType = eventType,
       description = "${additionalInformation.userId} ${eventType.description}",
-      occurredAt = LocalDateTime.now(clock),
+      occurredAt = OffsetDateTime.now(clock),
       additionalInformation = additionalInformation,
     )
   }

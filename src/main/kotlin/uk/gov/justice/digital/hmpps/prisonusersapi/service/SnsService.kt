@@ -8,15 +8,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.sqs.publish
-import java.time.LocalDateTime
-import java.time.ZoneId
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 @Service
 class SnsService(
   hmppsQueueService: HmppsQueueService,
-  private val zoneId: ZoneId,
   private val objectMapper: ObjectMapper,
 ) {
   companion object {
@@ -32,14 +30,14 @@ class SnsService(
   fun publishDomainEvent(
     eventType: PrisonUserDomainEventType,
     description: String,
-    occurredAt: LocalDateTime,
+    occurredAt: OffsetDateTime,
     additionalInformation: AdditionalInformation? = null,
   ) {
     publishToDomainEventsTopic(
       HMPPSDomainEvent(
         eventType = eventType.value,
         additionalInformation = additionalInformation,
-        occurredAt = occurredAt.atZone(zoneId).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+        occurredAt = occurredAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
         description = description,
       ),
     )
