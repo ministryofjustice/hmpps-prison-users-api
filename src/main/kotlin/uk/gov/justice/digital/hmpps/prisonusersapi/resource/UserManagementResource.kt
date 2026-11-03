@@ -26,7 +26,8 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 @RequestMapping("/users", produces = [MediaType.APPLICATION_JSON_VALUE])
 class UserManagementResource(
   private val userService: UserService,
-  private val eventPublishService: EventPublishService) {
+  private val eventPublishService: EventPublishService,
+) {
 
   @PreAuthorize("hasRole('ROLE_MANAGE_NOMIS_USER_ACCOUNT')")
   @PutMapping("/{username}/unlock-user")
