@@ -11,11 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
+import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import java.time.LocalDateTime
 
-class UserResourceIntTest : IntegrationTestBase() {
+class UserResourceIntTest : SqsIntegrationTestBase() {
   @Autowired
   private lateinit var dataBuilder: DataBuilder
 
