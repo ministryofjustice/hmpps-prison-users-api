@@ -93,7 +93,7 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
   fun cleanQueue() {
     testDomainEventQueue.sqsClient.purgeQueue(
       PurgeQueueRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build(),
-    )
+    ).get()
     testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
   }
 
