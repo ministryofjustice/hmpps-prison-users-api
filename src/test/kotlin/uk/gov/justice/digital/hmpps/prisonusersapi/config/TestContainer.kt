@@ -15,8 +15,7 @@ abstract class TestContainer<InstanceType>(
   val instance: InstanceType? by lazy { startIfNotRunning() }
 
   open fun isRunning(): Boolean = try {
-    val serverSocket = ServerSocket(exposedPort)
-    serverSocket.localPort == 0
+    ServerSocket(exposedPort).use { false }
   } catch (e: IOException) {
     true
   }
