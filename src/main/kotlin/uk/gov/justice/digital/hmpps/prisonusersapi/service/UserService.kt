@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadDetail
@@ -18,7 +19,6 @@ import java.util.function.Supplier
 @Transactional
 class UserService(
   private val userAccountRepository: UserAccountRepository,
-  private val eventPublishService: EventPublishService,
 ) {
 
   @Transactional(readOnly = true)
@@ -46,21 +46,13 @@ class UserService(
     return userAccount.toUserDetail()
   }
 
-  fun unlockUser(username: String) {
+  fun unlockUser(username: String): UserAccount {
     val userAccount = userAccountRepository.findById(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
 
     userAccount.user.status = UserStatus.ACTIVE
     userAccount.accountStatus = AccountStatus.OPEN
-
-    eventPublishService.publishEvent(
-      eventType = PrisonUserDomainEventType.USER_ACCOUNT_UNLOCKED,
-      additionalInformation = AdditionalInformation(
-        userId = userAccount.user.userId!!,
-        legacyStaffId = userAccount.user.legacyStaffId,
-        username = userAccount.username,
-      ),
-    )
+    return userAccount
   }
 
   companion object {

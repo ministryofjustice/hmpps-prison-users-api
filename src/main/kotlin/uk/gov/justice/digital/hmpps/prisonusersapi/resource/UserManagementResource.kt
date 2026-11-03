@@ -16,12 +16,17 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.AdditionalInformation
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.EventPublishService
+import uk.gov.justice.digital.hmpps.prisonusersapi.service.PrisonUserDomainEventType
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 
 @RestController
 @Validated
 @RequestMapping("/users", produces = [MediaType.APPLICATION_JSON_VALUE])
-class UserManagementResource(private val userService: UserService) {
+class UserManagementResource(
+  private val userService: UserService,
+  private val eventPublishService: EventPublishService) {
 
   @PreAuthorize("hasRole('ROLE_MANAGE_NOMIS_USER_ACCOUNT')")
   @PutMapping("/{username}/unlock-user")
@@ -58,6 +63,14 @@ class UserManagementResource(private val userService: UserService) {
     @Size(max = 30, min = 1, message = "username must be between 1 and 30")
     username: String,
   ) {
-    userService.unlockUser(username)
+    val userAccount = userService.unlockUser(username)
+    eventPublishService.publishEvent(
+      eventType = PrisonUserDomainEventType.USER_ACCOUNT_UNLOCKED,
+      additionalInformation = AdditionalInformation(
+        userId = userAccount.user.userId!!,
+        legacyStaffId = userAccount.user.legacyStaffId,
+        username = userAccount.username,
+      ),
+    )
   }
 }
