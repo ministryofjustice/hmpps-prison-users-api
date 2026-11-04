@@ -88,6 +88,7 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+    version: 5.34.1
     filter: true
 
 sync:
