@@ -104,7 +104,7 @@ class UserManagementResourceIntTest : SqsIntegrationTestBase() {
         .jsonPath("$.accountNonLocked").isEqualTo(true)
 
       assertThatDomainEventWasSent(
-        eventType = "user.account.unlocked",
+        eventType = "prison-users.user.account.unlocked",
         legacyStaffId = userDetail.staffId,
         username = userDetail.username,
       )
