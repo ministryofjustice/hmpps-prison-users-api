@@ -20,7 +20,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadMember
-import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
+import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
@@ -36,7 +36,7 @@ import java.time.LocalDateTime
 private const val SYNC_ROLE = "ROLE_PRISON_USERS_API__SYNC__RW"
 private const val RECONCILIATION_ROLE = "ROLE_PRISON_USERS_API__MIGRATION__RW"
 
-class SyncResourceIntTest : IntegrationTestBase() {
+class SyncResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   private lateinit var syncService: SyncService

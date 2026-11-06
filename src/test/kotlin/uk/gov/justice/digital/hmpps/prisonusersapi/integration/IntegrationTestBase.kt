@@ -8,11 +8,27 @@ import org.springframework.http.HttpHeaders
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureWebTestClient
 abstract class IntegrationTestBase {
+
+  companion object {
+    // All tests should use a frozen instant for “now”: 12:34:56 on 5 December 2023 in London
+    val zoneId: ZoneId = ZoneId.of("Europe/London")
+    val clock: Clock = Clock.fixed(
+      Instant.parse("2023-12-05T12:34:56.123456+00:00"),
+      zoneId,
+    )
+    val now: LocalDateTime = LocalDateTime.now(clock)
+    val today: LocalDate = now.toLocalDate()
+  }
 
   @Autowired
   protected lateinit var webTestClient: WebTestClient

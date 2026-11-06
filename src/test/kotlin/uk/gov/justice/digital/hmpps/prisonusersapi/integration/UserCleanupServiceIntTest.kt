@@ -16,7 +16,7 @@ import java.util.UUID
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @TestPropertySource(properties = ["user-cleanup.batch-size=2"])
-class UserCleanupServiceIntTest : IntegrationTestBase() {
+class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
 
   private val cleanupLockName = "UserCleanupService.cleanup"
 

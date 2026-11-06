@@ -88,7 +88,7 @@ data class UserAccount(
   val accountType: UsageType,
 
   @Convert(converter = AccountStatusConverter::class)
-  val accountStatus: AccountStatus,
+  var accountStatus: AccountStatus,
 
   @OneToOne(optional = true)
   @JoinColumn(name = "active_caseload_id")
