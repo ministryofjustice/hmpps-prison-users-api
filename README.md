@@ -19,13 +19,13 @@ TODO
 ## HMPPS domain events
 This service publishes a number of domain events to the HMPPS domain event bus, as follows:
 
-- `user.account.unlocked` domain event raised when a prison system user is unlocked.
+- `prison-users.user.account.unlocked` domain event raised when a prison system user is unlocked.
 
-### Publish -> user.account.unlocked
+### Publish -> prison-users.user.account.unlocked
 The message is published via amazon sns. The payload is defined below.
 ```json
 {
-   "eventType": "user.account.unlocked",
+   "eventType": "prison-users.user.account.unlocked",
    "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
    "publishedAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event was published
    "version": 1, 

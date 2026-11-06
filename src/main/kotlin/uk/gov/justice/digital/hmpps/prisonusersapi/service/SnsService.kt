@@ -91,7 +91,7 @@ enum class PrisonUserDomainEventType(
   val description: String,
 ) {
   USER_ACCOUNT_UNLOCKED(
-    "user.account.unlocked",
+    "prison-users.user.account.unlocked",
     "Prison user account has been unlocked",
   ),
 }
