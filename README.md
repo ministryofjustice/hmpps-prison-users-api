@@ -26,7 +26,7 @@ The message is published via amazon sns. The payload is defined below.
 ```json
 {
    "eventType": "user.account.unlocked",
-   "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the restricted patient was added
+   "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
    "publishedAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event was published
    "version": 1, 
    "description": "Prison user account has been unlocked",   

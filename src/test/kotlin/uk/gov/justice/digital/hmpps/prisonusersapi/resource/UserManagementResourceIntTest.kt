@@ -70,6 +70,14 @@ class UserManagementResourceIntTest : SqsIntegrationTestBase() {
     }
 
     @Test
+    fun `user name too long`() {
+      webTestClient.put().uri("/users/thisusernameiswaytoolongtobevalid/unlock-user")
+        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+        .exchange()
+        .expectStatus().isBadRequest
+    }
+
+    @Test
     fun `should unlock user and post correct domain event`() {
       val userDetail = webTestClient.get().uri("/users/marco.rossi")
         .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
