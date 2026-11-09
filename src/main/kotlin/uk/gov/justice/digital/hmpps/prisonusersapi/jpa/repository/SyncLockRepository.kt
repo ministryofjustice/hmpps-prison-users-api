@@ -5,4 +5,6 @@ import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 
 @Repository
-interface SyncLockRepository : JpaRepository<SyncLock, Long>
+interface SyncLockRepository : JpaRepository<SyncLock, Long> {
+  fun deleteByLockedBy(lockedBy: String)
+}
