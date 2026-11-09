@@ -6,12 +6,10 @@ import org.awaitility.kotlin.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.BeforeEach
-import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.json.AutoConfigureJson
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.LocalStackTestContainer
@@ -20,19 +18,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.HMPPSMessage
 import uk.gov.justice.hmpps.sqs.HmppsQueue
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.sqs.countMessagesOnQueue
-import java.time.Clock
 
 @AutoConfigureJson
 abstract class SqsIntegrationTestBase : IntegrationTestBase() {
-
-  @MockitoBean
-  private lateinit var clock: Clock
-
-  @BeforeEach
-  fun setupClock() {
-    whenever(clock.instant()).thenReturn(IntegrationTestBase.clock.instant())
-    whenever(clock.zone).thenReturn(IntegrationTestBase.clock.zone)
-  }
 
   companion object {
     private val localstackInstance = LocalStackTestContainer.instance
