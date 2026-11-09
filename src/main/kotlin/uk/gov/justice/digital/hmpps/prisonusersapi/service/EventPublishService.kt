@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.OffsetDateTime
@@ -14,11 +15,20 @@ class EventPublishService(
     eventType: PrisonUserDomainEventType,
     additionalInformation: AdditionalInformation,
   ) {
-    snsService.publishDomainEvent(
-      eventType = eventType,
-      description = "${additionalInformation.userId} ${eventType.description}",
-      occurredAt = OffsetDateTime.now(clock),
-      additionalInformation = additionalInformation,
-    )
+    try {
+      snsService.publishDomainEvent(
+        eventType = eventType,
+        description = "${additionalInformation.userId} ${eventType.description}",
+        occurredAt = OffsetDateTime.now(clock),
+        additionalInformation = additionalInformation,
+      )
+    } catch (e: Exception) {
+      log.error("Failed to publish domain event $eventType for user ${additionalInformation.userId}", e)
+      throw e
+    }
+  }
+
+  private companion object {
+    private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
