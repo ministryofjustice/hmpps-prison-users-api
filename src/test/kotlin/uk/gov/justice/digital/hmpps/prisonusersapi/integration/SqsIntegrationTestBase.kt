@@ -8,11 +8,8 @@ import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.json.AutoConfigureJson
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
-import uk.gov.justice.digital.hmpps.prisonusersapi.config.LocalStackTestContainer
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.HMPPSDomainEvent
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.HMPPSMessage
 import uk.gov.justice.hmpps.sqs.HmppsQueue
@@ -21,17 +18,6 @@ import uk.gov.justice.hmpps.sqs.countMessagesOnQueue
 
 @AutoConfigureJson
 abstract class SqsIntegrationTestBase : IntegrationTestBase() {
-
-  companion object {
-    private val localstackInstance = LocalStackTestContainer.instance
-
-    @Suppress("unused")
-    @JvmStatic
-    @DynamicPropertySource
-    fun localstackProperties(registry: DynamicPropertyRegistry) {
-      localstackInstance?.let { LocalStackTestContainer.setupProperties(localstackInstance, registry) }
-    }
-  }
 
   init {
     // Resolves an issue where Wiremock keeps previous sockets open from other tests causing connection resets
