@@ -27,7 +27,6 @@ The message is published via amazon sns. The payload is defined below.
 {
    "eventType": "prison-users.user.account.unlocked",
    "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
-   "publishedAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event was published
    "version": 1, 
    "description": "Prison user account has been unlocked",   
    "additionalInformation": { "userId": "11111111-2222-3333-4444-555555555555", "legacyStaffId": "12345", "username": "ATURNER_GEN" }
