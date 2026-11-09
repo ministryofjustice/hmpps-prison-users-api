@@ -14,13 +14,6 @@ class EventPublishService(
     eventType: PrisonUserDomainEventType,
     additionalInformation: AdditionalInformation,
   ) {
-    sendDomainEvent(
-      eventType = eventType,
-      additionalInformation = additionalInformation,
-    )
-  }
-
-  private fun sendDomainEvent(eventType: PrisonUserDomainEventType, additionalInformation: AdditionalInformation) {
     snsService.publishDomainEvent(
       eventType = eventType,
       description = "${additionalInformation.userId} ${eventType.description}",
