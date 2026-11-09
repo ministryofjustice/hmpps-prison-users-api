@@ -40,14 +40,20 @@ The application comes with a `dev` spring profile that includes default settings
 necessary when deploying to kubernetes as these values are included in the helm configuration templates -
 e.g. `values-dev.yaml`.
 
-There is also a `docker-compose.yml` that can be used to run a local instance of the template in docker and also an
-instance of HMPPS Auth (required if your service calls out to other services using a token).
+There is also a `docker-compose.yml` that can be used to run the application, HMPPS Auth and LocalStack
+(SNS/SQS for domain events) in Docker.
 
 ```bash
 docker compose pull && docker compose up
 ```
 
-will run the application and HMPPS Auth within a local docker instance.
+will run the application, HMPPS Auth and LocalStack within a local docker instance.
+
+The `dev` profile uses LocalStack at `http://localhost:4566` in region `eu-west-2`. The HMPPS SQS starter
+automatically creates the `hmpps-domain-events` SNS topic, configured as `domainevents`, on startup.
+Compose overrides `HMPPS_SQS_LOCALSTACK_URL` to `http://localstack:4566` for the application container.
+This allows `PUT /users/{username}/unlock-user` to publish its domain event locally. The endpoint still
+requires an existing user and a token with `ROLE_MANAGE_NOMIS_USER_ACCOUNT`.
 
 ### Running the application in Intellij
 
@@ -55,8 +61,10 @@ will run the application and HMPPS Auth within a local docker instance.
 docker compose pull && docker compose up --scale hmpps-prison-users-api=0
 ```
 
-will just start a docker instance of HMPPS Auth. The application should then be started with a `dev` active profile
-in Intellij.
+will start HMPPS Auth and LocalStack without the application container. The application should then be started
+with a `dev` active profile in Intellij, with `HMPPS_AUTH_URL=http://localhost:8090/auth`.
+For a local PostgreSQL database, also start `docker-compose-test.yml` and use both `dev` and `local-postgres`
+profiles; the `dev` profile supplies the local SNS configuration.
 
 ### Building and running the docker image locally
 

@@ -8,10 +8,14 @@ services:
       - "8080:8080"
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8080"]
+    depends_on:
+      localstack:
+        condition: service_healthy
     environment:
       - SERVER_PORT=8080
       - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
       - SPRING_PROFILES_ACTIVE=dev
+      - HMPPS_SQS_LOCALSTACK_URL=http://localstack:4566
 
   hmpps-auth:
     image: ghcr.io/ministryofjustice/hmpps-auth:latest
@@ -26,6 +30,21 @@ services:
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=dev
       - APPLICATION_AUTHENTICATION_UI_ALLOWLIST=0.0.0.0/0
+
+  localstack:
+    image: localstack/localstack:4
+    networks:
+      - hmpps
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sns,sqs
+      - DEFAULT_REGION=eu-west-2
+    healthcheck:
+      test: ["CMD", "awslocal", "sns", "list-topics", "--region", "eu-west-2"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 networks:
   hmpps:
