@@ -19,6 +19,7 @@ import java.util.function.Supplier
 @Transactional
 class UserService(
   private val userAccountRepository: UserAccountRepository,
+  private val syncLockTemplate: SyncLockTemplate,
 ) {
 
   @Transactional(readOnly = true)
@@ -50,9 +51,15 @@ class UserService(
     val userAccount = userAccountRepository.findById(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
 
+    return syncLockTemplate.execute(userAccount.user.legacyStaffId) {
+      unlockUserAccount(userAccount)
+    }
+  }
+
+  private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
     userAccount.user.status = UserStatus.ACTIVE
     userAccount.accountStatus = AccountStatus.OPEN
-    return userAccount
+    return userAccountRepository.save(userAccount)
   }
 
   companion object {

@@ -56,6 +56,11 @@ class UserManagementResource(
         description = "Incorrect permissions to unlock a user",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Data integrity violation or sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun unlockUser(
