@@ -3,8 +3,11 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
-import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
+import java.time.LocalDateTime
+import java.util.UUID
 
 @Component
 class SyncLockTemplate(
@@ -14,18 +17,35 @@ class SyncLockTemplate(
 ) {
 
   fun <T> execute(legacyStaffId: Long, block: () -> T): T {
-    val startTime = System.currentTimeMillis()
+    val startTime = System.nanoTime()
+    val lockedBy = UUID.randomUUID().toString()
     while (true) {
       try {
-        acquire(legacyStaffId)
-        return block()
+        acquire(legacyStaffId, lockedBy)
+        break
       } catch (e: SyncLockBusyException) {
-        if (System.currentTimeMillis() - startTime > lockMaxWaitMs) {
+        if ((System.nanoTime() - startTime) / 1_000_000 >= lockMaxWaitMs) {
           throw SyncLockAcquisitionTimeoutException("Timeout waiting for sync lock for legacy staff id $legacyStaffId", e)
         }
         pauseFor(legacyStaffId)
-      } finally {
-        release()
+      }
+    }
+
+    val releaseAfterTransaction = TransactionSynchronizationManager.isSynchronizationActive()
+    if (releaseAfterTransaction) {
+      // Keep the lock until the protected changes have committed or rolled back.
+      TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+        override fun afterCompletion(status: Int) {
+          syncLockRepository.release(legacyStaffId, lockedBy)
+        }
+      })
+    }
+
+    try {
+      return block()
+    } finally {
+      if (!releaseAfterTransaction) {
+        syncLockRepository.release(legacyStaffId, lockedBy)
       }
     }
   }
@@ -42,22 +62,12 @@ class SyncLockTemplate(
     }
   }
 
-  private fun acquire(legacyStaffId: Long) {
+  private fun acquire(legacyStaffId: Long, lockedBy: String) {
     try {
-      syncLockRepository.saveAndFlush(
-        SyncLock(
-          legacyStaffId = legacyStaffId,
-          lockedAt = java.time.LocalDateTime.now(),
-          lockedBy = Thread.currentThread().name,
-        ),
-      )
+      syncLockRepository.acquire(legacyStaffId, LocalDateTime.now(), lockedBy)
     } catch (e: DataIntegrityViolationException) {
       throw SyncLockBusyException("Sync lock is already held for legacy staff id $legacyStaffId", e)
     }
-  }
-
-  private fun release() {
-    syncLockRepository.deleteByLockedBy(Thread.currentThread().name)
   }
 }
 

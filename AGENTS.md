@@ -55,6 +55,8 @@
 - `dev` uses in-memory H2 with Flyway (`application-dev.yml`); deployed environments use PostgreSQL with datasource values injected from Kubernetes secrets (`helm_deploy/hmpps-prison-users-api/values.yaml`).
 - `application.yml` enables graceful shutdown and health probes; Spring Boot management endpoints are exposed at `/`, with `/health` and `/info` available for readiness/liveness and diagnostics.
 - Sync lock timing is configurable via `sync.lock.retry-backoff-ms` and `sync.lock.max-wait-ms` in `application.yml` and is used by `service/SyncLockTemplate.kt`.
+- Sync lock acquisition uses an insert in a separate transaction, not JPA merge. Each operation has a unique owner token and releases only its own lock after the service transaction commits or rolls back.
+- An abnormal process termination can leave a committed sync lock behind. Remove an orphan row only after confirming its owner is no longer running; locks do not expire automatically.
 - `springdoc-openapi-starter-webmvc-ui` 3.2.0 is used for API documentation; when updating, check compatibility with test utilities like `swagger-parser` 2.1.48.
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
 - For broader HMPPS Kotlin conventions, see the "Common Kotlin patterns" section in `README.md` and the linked tech docs; the project is community managed via `#kotlin-dev`.

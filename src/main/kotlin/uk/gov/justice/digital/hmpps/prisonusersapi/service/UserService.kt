@@ -48,10 +48,12 @@ class UserService(
   }
 
   fun unlockUser(username: String): UserAccount {
-    val userAccount = userAccountRepository.findById(username)
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
 
-    return syncLockTemplate.execute(userAccount.user.legacyStaffId) {
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .orElseThrow(UserNotFoundException("User $username not found"))
       unlockUserAccount(userAccount)
     }
   }

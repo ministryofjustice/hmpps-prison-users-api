@@ -7,29 +7,37 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
+import java.time.LocalDateTime
 
-class UserManagementResourceIntTest : SqsIntegrationTestBase() {
-
-  @Autowired
-  private lateinit var dataBuilder: DataBuilder
+@TestPropertySource(properties = ["sync.lock.max-wait-ms=100"])
+class UserManagementResourceIntTest(
+  @Autowired private val dataBuilder: DataBuilder,
+  @Autowired private val syncLockRepository: SyncLockRepository,
+) : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /{username}/unlock-user")
   @Nested
   inner class UnlockUser {
+    private var legacyStaffId: Long = 0
+
     @BeforeEach
     internal fun createUsers() {
       with(dataBuilder) {
-        generalUser()
+        legacyStaffId = generalUser()
           .username("marco.rossi")
           .firstName("Marco")
           .lastName("Rossi")
           .status(AccountStatus.EXPIRED_LOCKED)
           .buildAndSave()
+          .user.legacyStaffId
       }
     }
 
@@ -75,6 +83,40 @@ class UserManagementResourceIntTest : SqsIntegrationTestBase() {
         .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
         .exchange()
         .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `should return conflict when sync lock is not available`() {
+      syncLockRepository.saveAndFlush(
+        SyncLock(
+          legacyStaffId = legacyStaffId,
+          lockedAt = LocalDateTime.now(),
+          lockedBy = "another-sync",
+        ),
+      )
+
+      try {
+        webTestClient.put().uri("/users/marco.rossi/unlock-user")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody()
+          .jsonPath("$.status").isEqualTo(409)
+          .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+          .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+        assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+
+        webTestClient.get().uri("/users/marco.rossi")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.accountStatus").isEqualTo(AccountStatus.EXPIRED_LOCKED.name)
+          .jsonPath("$.accountNonLocked").isEqualTo(false)
+      } finally {
+        syncLockRepository.deleteById(legacyStaffId)
+      }
     }
 
     @Test
