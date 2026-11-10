@@ -2,8 +2,7 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncRequest
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.PrisonUserSyncResponse
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.User
@@ -22,6 +21,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUser
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadMember
 
+@Transactional
 @Service
 class SyncService(
   private val usersRepository: UsersRepository,
@@ -31,25 +31,15 @@ class SyncService(
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
   private val primaryEmailDetector: PrimaryEmailDetector,
   private val syncLockTemplate: SyncLockTemplate,
-  transactionManager: PlatformTransactionManager,
 ) {
 
-  private val transactionTemplate = TransactionTemplate(transactionManager)
-
-  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
-    val syncResponse = transactionTemplate.execute {
-      syncLockTemplate.execute(legacyStaffId) { syncUserInTransaction(legacyStaffId, request) }
-    }
-    return syncResponse
-  }
+  fun syncUser(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse = syncLockTemplate.execute(legacyStaffId) { processSyncUser(legacyStaffId, request) }
 
   fun deleteUser(legacyStaffId: Long) {
-    transactionTemplate.execute {
-      syncLockTemplate.execute(legacyStaffId) { deleteUserInTransaction(legacyStaffId) }
-    }
+    syncLockTemplate.execute(legacyStaffId) { processDeleteUser(legacyStaffId) }
   }
 
-  private fun syncUserInTransaction(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
+  private fun processSyncUser(legacyStaffId: Long, request: PrisonUserSyncRequest): PrisonUserSyncResponse {
     val updatedUser = usersRepository.findByLegacyStaffId(legacyStaffId)
       .map {
         mergeRequestIntoUser(it, request)
@@ -310,7 +300,7 @@ class SyncService(
     return PrisonUserSyncResponse(updatedUser.userId.toString(), updatedUser.legacyStaffId)
   }
 
-  private fun deleteUserInTransaction(legacyStaffId: Long) {
+  private fun processDeleteUser(legacyStaffId: Long) {
     val user = usersRepository.findByLegacyStaffId(legacyStaffId)
       .orElseThrow { UserNotFoundException("User with legacy staff id $legacyStaffId not found") }
 
