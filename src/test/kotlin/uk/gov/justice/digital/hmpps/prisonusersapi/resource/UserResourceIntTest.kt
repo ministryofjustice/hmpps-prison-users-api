@@ -9,15 +9,18 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import java.time.LocalDate
 import java.time.LocalDateTime
 
-class UserResourceIntTest : IntegrationTestBase() {
-  @Autowired
-  private lateinit var dataBuilder: DataBuilder
+class UserResourceIntTest(
+  @Autowired private var dataBuilder: DataBuilder,
+  @Autowired private var jdbcTemplate: NamedParameterJdbcTemplate,
+) : IntegrationTestBase() {
 
   @DisplayName("GET /users/basic/{username}")
   @Nested
@@ -319,6 +322,131 @@ class UserResourceIntTest : IntegrationTestBase() {
         .expectStatus().isOk
         .expectBody()
         .jsonPath("staffId").exists()
+    }
+  }
+
+  @DisplayName("GET /users/{username}/administered-by/{localAdministratorUsername}")
+  @Nested
+  inner class IsUserAdministeredBy {
+    @BeforeEach
+    internal fun createUsers() {
+      with(dataBuilder) {
+        generalUser().username("JON_LSA").legacyStaffId(700001).atPrisons("WWI").buildAndSave()
+        generalUser().username("mike.dean").legacyStaffId(700002).atPrisons("WWI").buildAndSave()
+        generalUser().username("mark.brown").legacyStaffId(700003).atPrisons("BXI").buildAndSave()
+      }
+
+      addCaseloadAdministrator("JON_LSA", "WWI")
+      addCaseloadMember("mike.dean", "WWI")
+      addCaseloadMember("mark.brown", "BXI")
+    }
+
+    @AfterEach
+    internal fun deleteUsers() = dataBuilder.deleteAll()
+
+    @Test
+    fun `access unauthorized when no authority`() {
+      webTestClient.get().uri("/users/mike.dean/administered-by/JON_LSA")
+        .exchange()
+        .expectStatus().isUnauthorized
+    }
+
+    @Test
+    fun `access unauthorized with wrong role`() {
+      webTestClient.get().uri("/users/mike.dean/administered-by/JON_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_NOMIS_STAFF_DETAILS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `true when the user is in a local admin authority the local administrator administers`() {
+      webTestClient.get().uri("/users/mike.dean/administered-by/JON_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES"), username = "JON_LSA"))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("username").isEqualTo("mike.dean")
+        .jsonPath("localAdministratorUsername").isEqualTo("JON_LSA")
+        .jsonPath("administered").isEqualTo(true)
+    }
+
+    @Test
+    fun `false when the user is only in another local admin authority`() {
+      webTestClient.get().uri("/users/mark.brown/administered-by/JON_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES"), username = "JON_LSA"))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("administered").isEqualTo(false)
+    }
+
+    @Test
+    fun `false when the user does not exist`() {
+      webTestClient.get().uri("/users/dummy/administered-by/JON_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("administered").isEqualTo(false)
+    }
+
+    @Test
+    fun `false when the local administrator does not exist`() {
+      webTestClient.get().uri("/users/mike.dean/administered-by/dummy")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("administered").isEqualTo(false)
+    }
+
+    @Test
+    fun `false when the user's membership of the authority is inactive`() {
+      dataBuilder.generalUser()
+        .username("sam.inactive")
+        .legacyStaffId(700004)
+        .atPrisons("WWI")
+        .buildAndSave()
+      addCaseloadMember("sam.inactive", "WWI", active = false)
+
+      webTestClient.get().uri("/users/sam.inactive/administered-by/JON_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("administered").isEqualTo(false)
+    }
+
+    @Test
+    fun `false when the administrator's assignment to the authority is inactive`() {
+      dataBuilder.generalUser()
+        .username("OLD_LSA")
+        .legacyStaffId(700004)
+        .atPrisons("WWI")
+        .buildAndSave()
+      addCaseloadAdministrator("OLD_LSA", "WWI", active = false)
+
+      webTestClient.get().uri("/users/mike.dean/administered-by/OLD_LSA")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("administered").isEqualTo(false)
+    }
+
+    private fun addCaseloadAdministrator(username: String, caseloadId: String, active: Boolean = true) {
+      jdbcTemplate.update(
+        "INSERT INTO user_caseload_administrators (username, caseload_id, active, created_by) VALUES (:username, :caseloadId, :active, 'TEST')",
+        mapOf("username" to username, "caseloadId" to caseloadId, "active" to active),
+      )
+    }
+
+    private fun addCaseloadMember(username: String, caseloadId: String, active: Boolean = true) {
+      jdbcTemplate.update(
+        "INSERT INTO user_caseload_members (username, caseload_id, start_date, active, created_by) VALUES (:username, :caseloadId, :startDate, :active, 'TEST')",
+        mapOf("username" to username, "caseloadId" to caseloadId, "startDate" to LocalDate.now(), "active" to active),
+      )
     }
   }
 }

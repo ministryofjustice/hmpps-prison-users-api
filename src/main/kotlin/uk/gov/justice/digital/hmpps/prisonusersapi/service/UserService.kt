@@ -4,12 +4,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAdministeredBy
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserDetail
@@ -20,6 +22,7 @@ import java.util.function.Supplier
 class UserService(
   private val userAccountRepository: UserAccountRepository,
   private val syncLockTemplate: SyncLockTemplate,
+  private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
 ) {
 
   @Transactional(readOnly = true)
@@ -63,6 +66,13 @@ class UserService(
     userAccount.accountStatus = AccountStatus.OPEN
     return userAccountRepository.save(userAccount)
   }
+
+  @Transactional(readOnly = true)
+  fun isAdministeredBy(username: String, localAdministratorUsername: String) = UserAdministeredBy(
+    username = username,
+    localAdministratorUsername = localAdministratorUsername,
+    administered = userCaseloadMemberRepository.isAdministeredBy(username, localAdministratorUsername),
+  )
 
   companion object {
     private val log = LoggerFactory.getLogger(UserService::class.java)

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAdministeredBy
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 
@@ -150,6 +151,39 @@ class UserResource(
     log.info("Returning user details for : {}", username)
     return userDetail
   }
+
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_ACCESS_ROLES')")
+  @GetMapping("/{username}/administered-by/{localAdministratorUsername}")
+  @Operation(
+    summary = "Check if a local administrator looks after a user",
+    description = "Returns true if the user belongs to a local admin authority that the local administrator manages, otherwise false. " +
+      "Also returns false if either user doesn't exist. Requires role ROLE_MAINTAIN_ACCESS_ROLES",
+    security = [SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES")],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Whether the user is administered by the local administrator",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing the role needed to run this check",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun isUserAdministeredBy(
+    @Schema(description = "Username", example = "testuser1", required = true)
+    @PathVariable
+    username: String,
+    @Schema(description = "Local administrator's username", example = "testlsa1", required = true)
+    @PathVariable
+    localAdministratorUsername: String,
+  ): UserAdministeredBy = userService.isAdministeredBy(username, localAdministratorUsername)
 
   companion object {
     private val log = LoggerFactory.getLogger(UserResource::class.java)
