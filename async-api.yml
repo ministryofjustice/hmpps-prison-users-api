@@ -20,7 +20,7 @@ servers:
 
 components:
   messages:
-    prison-user-api.user.unlocked:
+    prison-users.user.account.unlocked:
       $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/prison-users/user-unlocked.yaml
 
 
@@ -31,8 +31,8 @@ channels:
       sns:
         name: domainevents
     messages:
-      prison-user-api.user.unlocked:
-        $ref: '#/components/messages/prison-user-api.user.unlocked'
+      prison-users.user.account.unlocked:
+        $ref: '#/components/messages/prison-users.user.account.unlocked'
 
 operations:
   publish-event:
@@ -40,4 +40,4 @@ operations:
     channel:
       $ref: '#/channels/hmpps-domain-events'
     messages:
-      - $ref: '#/channels/hmpps-domain-events/messages/prison-user-api.user.unlocked'
+      - $ref: '#/channels/hmpps-domain-events/messages/prison-users.user.account.unlocked'
