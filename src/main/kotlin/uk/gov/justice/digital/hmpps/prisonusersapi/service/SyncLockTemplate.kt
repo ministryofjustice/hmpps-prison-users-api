@@ -1,17 +1,20 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
+import java.time.Clock
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Component
 class SyncLockTemplate(
   private val syncLockRepository: SyncLockRepository,
+  private val clock: Clock,
   @Value($$"${sync.lock.retry-backoff-ms:50}") private val lockRetryBackoffMs: Long,
   @Value($$"${sync.lock.max-wait-ms:5000}") private val lockMaxWaitMs: Long,
 ) {
@@ -36,7 +39,7 @@ class SyncLockTemplate(
       // Keep the lock until the protected changes have committed or rolled back.
       TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
         override fun afterCompletion(status: Int) {
-          syncLockRepository.release(legacyStaffId, lockedBy)
+          release(legacyStaffId, lockedBy)
         }
       })
     }
@@ -45,8 +48,16 @@ class SyncLockTemplate(
       return block()
     } finally {
       if (!releaseAfterTransaction) {
-        syncLockRepository.release(legacyStaffId, lockedBy)
+        release(legacyStaffId, lockedBy)
       }
+    }
+  }
+
+  private fun release(legacyStaffId: Long, lockedBy: String) {
+    try {
+      syncLockRepository.release(legacyStaffId, lockedBy)
+    } catch (e: Exception) {
+      log.error("Failed to release lock for legacy staff id $legacyStaffId", e)
     }
   }
 
@@ -64,10 +75,14 @@ class SyncLockTemplate(
 
   private fun acquire(legacyStaffId: Long, lockedBy: String) {
     try {
-      syncLockRepository.acquire(legacyStaffId, LocalDateTime.now(), lockedBy)
+      syncLockRepository.acquire(legacyStaffId, LocalDateTime.now(clock), lockedBy)
     } catch (e: DataIntegrityViolationException) {
       throw SyncLockBusyException("Sync lock is already held for legacy staff id $legacyStaffId", e)
     }
+  }
+
+  private companion object {
+    private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
 
