@@ -11,7 +11,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
-import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
@@ -21,7 +21,7 @@ import java.time.LocalDateTime
 class UserManagementResourceIntTest(
   @Autowired private val dataBuilder: DataBuilder,
   @Autowired private val syncLockRepository: SyncLockRepository,
-) : SqsIntegrationTestBase() {
+) : IntegrationTestBase() {
 
   @DisplayName("PUT /{username}/unlock-user")
   @Nested

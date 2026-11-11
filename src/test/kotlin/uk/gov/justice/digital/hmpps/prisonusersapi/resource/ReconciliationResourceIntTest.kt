@@ -16,14 +16,14 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncPrisonUserRole
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadMember
-import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.SyncService
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class ReconciliationResourceIntTest : SqsIntegrationTestBase() {
+class ReconciliationResourceIntTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var syncService: SyncService

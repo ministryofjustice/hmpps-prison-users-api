@@ -4,9 +4,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 
-class ReferenceDataResourceIntTest : SqsIntegrationTestBase() {
+class ReferenceDataResourceIntTest : IntegrationTestBase() {
   @DisplayName("GET /reference-data/caseloads")
   @Nested
   inner class GetCaseloads {
