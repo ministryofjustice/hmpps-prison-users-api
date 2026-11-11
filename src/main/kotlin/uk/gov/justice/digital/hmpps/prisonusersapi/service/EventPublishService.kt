@@ -18,16 +18,16 @@ class EventPublishService(
     try {
       snsService.publishDomainEvent(
         eventType = eventType,
-        description = "${additionalInformation.userId} ${eventType.description}",
+        description = "${additionalInformation.username} ${eventType.description}",
         occurredAt = OffsetDateTime.now(clock),
         additionalInformation = additionalInformation,
       )
     } catch (e: Exception) {
-      log.error("Failed to publish domain event $eventType for user ${additionalInformation.userId}", e)
+      log.error("Failed to publish domain event $eventType for user ${additionalInformation.username}", e)
     }
   }
 
   private companion object {
-    private val log = LoggerFactory.getLogger(this::class.java)
+    private val log = LoggerFactory.getLogger(EventPublishService::class.java)
   }
 }

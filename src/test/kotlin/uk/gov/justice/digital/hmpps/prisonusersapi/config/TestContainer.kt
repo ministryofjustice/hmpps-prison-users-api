@@ -10,7 +10,7 @@ abstract class TestContainer<InstanceType>(
   val containerName: String,
   val exposedPort: Int,
 ) {
-  protected val log: Logger = LoggerFactory.getLogger(this::class.java)
+  protected val log: Logger = LoggerFactory.getLogger(TestContainer::class.java)
 
   val instance: InstanceType? by lazy { startIfNotRunning() }
 

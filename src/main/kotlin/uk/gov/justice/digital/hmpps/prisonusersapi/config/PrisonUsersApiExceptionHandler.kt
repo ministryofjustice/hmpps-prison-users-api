@@ -175,7 +175,7 @@ class PrisonUsersApiExceptionHandler {
   private fun logValidationFailureFor(e: Exception) = log.info("Validation failure: ${e.message}")
 
   private companion object {
-    private val log = LoggerFactory.getLogger(this::class.java)
+    private val log = LoggerFactory.getLogger(PrisonUsersApiExceptionHandler::class.java)
   }
 }
 
