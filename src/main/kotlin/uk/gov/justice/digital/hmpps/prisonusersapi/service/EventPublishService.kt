@@ -24,7 +24,6 @@ class EventPublishService(
       )
     } catch (e: Exception) {
       log.error("Failed to publish domain event $eventType for user ${additionalInformation.userId}", e)
-      throw e
     }
   }
 
