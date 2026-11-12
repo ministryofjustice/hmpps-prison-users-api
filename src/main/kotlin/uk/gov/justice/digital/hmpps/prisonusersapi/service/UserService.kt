@@ -3,9 +3,12 @@ package uk.gov.justice.digital.hmpps.prisonusersapi.service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserBasicDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserCaseloadDetail
@@ -16,6 +19,7 @@ import java.util.function.Supplier
 @Transactional
 class UserService(
   private val userAccountRepository: UserAccountRepository,
+  private val syncLockTemplate: SyncLockTemplate,
 ) {
 
   @Transactional(readOnly = true)
@@ -41,6 +45,23 @@ class UserService(
     val userAccount = userAccountRepository.findWithUserAndActiveCaseloadAndUserRoleCodesByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
     return userAccount.toUserDetail()
+  }
+
+  fun unlockUser(username: String): UserAccount {
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .orElseThrow(UserNotFoundException("User $username not found"))
+      unlockUserAccount(userAccount)
+    }
+  }
+
+  private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
+    userAccount.user.status = UserStatus.ACTIVE
+    userAccount.accountStatus = AccountStatus.OPEN
+    return userAccountRepository.save(userAccount)
   }
 
   companion object {

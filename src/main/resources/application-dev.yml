@@ -18,3 +18,11 @@ spring:
 
   flyway:
     locations: classpath:db/prison-users
+
+hmpps.sqs:
+  provider: localstack
+  localstackUrl: http://localhost:4566
+  region: eu-west-2
+  topics:
+    domainevents:
+      arn: arn:aws:sns:eu-west-2:000000000000:hmpps-domain-events

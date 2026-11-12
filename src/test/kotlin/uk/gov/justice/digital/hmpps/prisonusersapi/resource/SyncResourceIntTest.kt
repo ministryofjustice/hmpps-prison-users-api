@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.TestPropertySource
 import org.springframework.web.reactive.function.BodyInserters
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UsageType
@@ -22,6 +23,8 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadAdm
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.sync.SyncUserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccessibleCaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadAdministratorRepository
@@ -36,6 +39,7 @@ import java.time.LocalDateTime
 private const val SYNC_ROLE = "ROLE_PRISON_USERS_API__SYNC__RW"
 private const val RECONCILIATION_ROLE = "ROLE_PRISON_USERS_API__MIGRATION__RW"
 
+@TestPropertySource(properties = ["sync.lock.max-wait-ms=100"])
 class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
@@ -64,6 +68,9 @@ class SyncResourceIntTest : IntegrationTestBase() {
 
   @Autowired
   private lateinit var dataBuilder: DataBuilder
+
+  @Autowired
+  private lateinit var syncLockRepository: SyncLockRepository
 
   @DisplayName("PUT /sync/user/{legacyStaffId}")
   @Nested
@@ -152,6 +159,33 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .body(BodyInserters.fromValue(minimalSyncRequest()))
         .exchange()
         .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `returns conflict when sync lock is not available`() {
+      syncLockRepository.saveAndFlush(
+        SyncLock(
+          legacyStaffId = legacyStaffId,
+          lockedAt = LocalDateTime.now(),
+          lockedBy = "another-sync",
+        ),
+      )
+
+      try {
+        webTestClient.put().uri("/sync/user/$legacyStaffId")
+          .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+          .body(BodyInserters.fromValue(minimalSyncRequest()))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody()
+          .jsonPath("$.status").isEqualTo(409)
+          .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+          .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+        assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+      } finally {
+        syncLockRepository.deleteById(legacyStaffId)
+      }
     }
 
     // ── Creation when the user does not exist ────────────────────────────────
@@ -1055,6 +1089,32 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
         .exchange()
         .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `returns conflict when sync lock is not available`() {
+      syncLockRepository.saveAndFlush(
+        SyncLock(
+          legacyStaffId = legacyStaffId,
+          lockedAt = LocalDateTime.now(),
+          lockedBy = "another-sync",
+        ),
+      )
+
+      try {
+        webTestClient.delete().uri("/sync/user/$legacyStaffId")
+          .headers(setAuthorisation(roles = listOf(SYNC_ROLE)))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody()
+          .jsonPath("$.status").isEqualTo(409)
+          .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+          .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+        assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+      } finally {
+        syncLockRepository.deleteById(legacyStaffId)
+      }
     }
 
     @Test

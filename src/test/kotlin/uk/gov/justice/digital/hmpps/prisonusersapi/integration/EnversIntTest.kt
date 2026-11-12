@@ -30,7 +30,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
-class EnversIntTest : IntegrationTestBase() {
+class EnversIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   private lateinit var usersRepository: UsersRepository
