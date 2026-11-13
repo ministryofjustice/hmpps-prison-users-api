@@ -187,4 +187,9 @@ abstract class UserAccountBuilder<T>(
       userAccount.copy(accountStatus = status)
     return this
   }
+
+  fun legacyStaffId(legacyStaffId: Long): UserAccountBuilder<T> {
+    this.userAccount = userAccount.copy(user = userAccount.user.copy(legacyStaffId = legacyStaffId))
+    return this
+  }
 }
