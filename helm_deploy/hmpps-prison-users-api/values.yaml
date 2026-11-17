@@ -1,6 +1,7 @@
 generic-service:
   nameOverride: hmpps-prison-users-api
   productId: "DPS017" # productId for the product that this belongs too, i.e. DPS001, see README.md for details
+  serviceAccountName: "hmpps-prison-users-api"
 
   replicaCount: 4
 
