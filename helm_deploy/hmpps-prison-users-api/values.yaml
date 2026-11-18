@@ -23,7 +23,7 @@ generic-service:
 
     # For any JAVA_TOOL_OPTIONS custom settings, make sure they are placed after the $(JAVA_PROXY_TOOL_OPTIONS)
     # This currently includes the defaults from the base image
-    JAVA_TOOL_OPTIONS: "$(JAVA_PROXY_TOOL_OPTIONS) -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=50.0"
+    JAVA_TOOL_OPTIONS: "$(JAVA_PROXY_TOOL_OPTIONS) -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=50.0 -XX:-UseBASE64Intrinsics"
     # JAVA_TOOL_OPTIONS is set in the base image (hmpps-eclipse-temurin) with:
     #   -XX:MaxRAMPercentage=50.0
     # Uncomment below to override memory settings if needed.
