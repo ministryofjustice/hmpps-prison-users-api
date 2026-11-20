@@ -47,110 +47,122 @@ class UserManagementResourceIntTest(
       dataBuilder.deleteAll()
     }
 
-    @Test
-    fun `access forbidden when no authority`() {
-      webTestClient.put().uri("/users/marco.rossi/unlock-user")
-        .exchange()
-        .expectStatus().isUnauthorized
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/users/marco.rossi/unlock-user")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/users/marco.rossi/unlock-user")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `get user forbidden with wrong role`() {
+        webTestClient.put().uri("/users/marco.rossi/unlock-user")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
     }
 
-    @Test
-    fun `access forbidden when no role`() {
-      webTestClient.put().uri("/users/marco.rossi/unlock-user")
-        .headers(setAuthorisation(roles = listOf()))
-        .exchange()
-        .expectStatus().isForbidden
+    @Nested
+    inner class Validation {
+      @Test
+      fun `user name too long`() {
+        webTestClient.put().uri("/users/thisusernameiswaytoolongtobevalid/unlock-user")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isBadRequest
+      }
     }
 
-    @Test
-    fun `get user forbidden with wrong role`() {
-      webTestClient.put().uri("/users/marco.rossi/unlock-user")
-        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-        .exchange()
-        .expectStatus().isForbidden
+    @Nested
+    inner class Failure {
+      @Test
+      fun `user not found`() {
+        webTestClient.put().uri("/users/not-found/unlock-user")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isNotFound
+      }
+
+      @Test
+      fun `should return conflict when sync lock is not available`() {
+        syncLockRepository.saveAndFlush(
+          SyncLock(
+            legacyStaffId = legacyStaffId,
+            lockedAt = LocalDateTime.now(),
+            lockedBy = "another-sync",
+          ),
+        )
+
+        try {
+          webTestClient.put().uri("/users/marco.rossi/unlock-user")
+            .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(409)
+            .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+            .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+          assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+
+          webTestClient.get().uri("/users/marco.rossi")
+            .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.accountStatus").isEqualTo(AccountStatus.EXPIRED_LOCKED.name)
+            .jsonPath("$.accountNonLocked").isEqualTo(false)
+        } finally {
+          syncLockRepository.deleteById(legacyStaffId)
+        }
+      }
     }
 
-    @Test
-    fun `user not found`() {
-      webTestClient.put().uri("/users/not-found/unlock-user")
-        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
-        .exchange()
-        .expectStatus().isNotFound
-    }
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `should unlock user and post correct domain event`() {
+        val userAccountDetails = webTestClient.get().uri("/users/marco.rossi")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<UserAccountDetails>()
+          .returnResult()
+          .responseBody!!
 
-    @Test
-    fun `user name too long`() {
-      webTestClient.put().uri("/users/thisusernameiswaytoolongtobevalid/unlock-user")
-        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
-        .exchange()
-        .expectStatus().isBadRequest
-    }
+        assertThat(userAccountDetails.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
+        assertThat(userAccountDetails.accountNonLocked).isEqualTo(false)
 
-    @Test
-    fun `should return conflict when sync lock is not available`() {
-      syncLockRepository.saveAndFlush(
-        SyncLock(
-          legacyStaffId = legacyStaffId,
-          lockedAt = LocalDateTime.now(),
-          lockedBy = "another-sync",
-        ),
-      )
-
-      try {
         webTestClient.put().uri("/users/marco.rossi/unlock-user")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
           .exchange()
-          .expectStatus().isEqualTo(409)
-          .expectBody()
-          .jsonPath("$.status").isEqualTo(409)
-          .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
-          .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
-
-        assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+          .expectStatus().isOk
 
         webTestClient.get().uri("/users/marco.rossi")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
           .exchange()
           .expectStatus().isOk
           .expectBody()
-          .jsonPath("$.accountStatus").isEqualTo(AccountStatus.EXPIRED_LOCKED.name)
-          .jsonPath("$.accountNonLocked").isEqualTo(false)
-      } finally {
-        syncLockRepository.deleteById(legacyStaffId)
+          .jsonPath("$.accountStatus").isEqualTo(AccountStatus.OPEN.name)
+          .jsonPath("$.accountNonLocked").isEqualTo(true)
+
+        assertThatDomainEventWasSent(
+          eventType = "prison-users.user.account.unlocked",
+          legacyStaffId = userAccountDetails.staffId,
+          username = userAccountDetails.username,
+        )
       }
-    }
-
-    @Test
-    fun `should unlock user and post correct domain event`() {
-      val userAccountDetails = webTestClient.get().uri("/users/marco.rossi")
-        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
-        .exchange()
-        .expectStatus().isOk
-        .expectBody<UserAccountDetails>()
-        .returnResult()
-        .responseBody!!
-
-      assertThat(userAccountDetails.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
-      assertThat(userAccountDetails.accountNonLocked).isEqualTo(false)
-
-      webTestClient.put().uri("/users/marco.rossi/unlock-user")
-        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
-        .exchange()
-        .expectStatus().isOk
-
-      webTestClient.get().uri("/users/marco.rossi")
-        .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
-        .exchange()
-        .expectStatus().isOk
-        .expectBody()
-        .jsonPath("$.accountStatus").isEqualTo(AccountStatus.OPEN.name)
-        .jsonPath("$.accountNonLocked").isEqualTo(true)
-
-      assertThatDomainEventWasSent(
-        eventType = "prison-users.user.account.unlocked",
-        legacyStaffId = userAccountDetails.staffId,
-        username = userAccountDetails.username,
-      )
     }
   }
 
