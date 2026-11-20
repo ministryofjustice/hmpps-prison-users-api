@@ -22,7 +22,8 @@ components:
   messages:
     prison-users.user.account.unlocked:
       $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/prison-users/user-unlocked.yaml
-
+    prison-users.user.name.updated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/prison-users/user-name-updated.yaml
 
 channels:
   hmpps-domain-events:
@@ -33,6 +34,8 @@ channels:
     messages:
       prison-users.user.account.unlocked:
         $ref: '#/components/messages/prison-users.user.account.unlocked'
+      prison-users.user.name.updated:
+        $ref: '#/components/messages/prison-users.user.name.updated'
 
 operations:
   publish-event:
@@ -41,3 +44,4 @@ operations:
       $ref: '#/channels/hmpps-domain-events'
     messages:
       - $ref: '#/channels/hmpps-domain-events/messages/prison-users.user.account.unlocked'
+      - $ref: '#/channels/hmpps-domain-events/messages/prison-users.user.name.updated'

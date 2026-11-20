@@ -38,8 +38,8 @@ data class User(
   @NotAudited
   val userEmails: MutableList<UserEmail> = mutableListOf(),
 
-  val firstName: String,
-  val lastName: String,
+  var firstName: String,
+  var lastName: String,
 
   @Enumerated(EnumType.STRING)
   var status: UserStatus,

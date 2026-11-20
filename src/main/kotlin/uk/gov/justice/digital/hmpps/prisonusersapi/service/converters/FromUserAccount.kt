@@ -1,12 +1,12 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service.converters
 
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserBasicDetails
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountBasicDetails
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountCaseloadDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 
-fun UserAccount.toUserCaseloadDetail(removeDpsCaseload: Boolean = false): UserCaseloadDetail = UserCaseloadDetail(
+fun UserAccount.toUserAccountCaseloadDetail(removeDpsCaseload: Boolean = false): UserAccountCaseloadDetail = UserAccountCaseloadDetail(
   username = this.username,
   activeCaseload = this.activeCaseload?.toPrisonCaseload(),
   active = AccountStatus.activeStatuses().contains(this.accountStatus),
@@ -18,7 +18,7 @@ fun UserAccount.toUserCaseloadDetail(removeDpsCaseload: Boolean = false): UserCa
     },
 )
 
-fun UserAccount.toUserBasicDetails(): UserBasicDetails = UserBasicDetails(
+fun UserAccount.toUserAccountBasicDetails(): UserAccountBasicDetails = UserAccountBasicDetails(
   username = this.username,
   staffId = this.user.legacyStaffId,
   firstName = this.user.firstName.capitalizeFully(),
@@ -28,7 +28,7 @@ fun UserAccount.toUserBasicDetails(): UserBasicDetails = UserBasicDetails(
   accountStatus = this.accountStatus.name,
 )
 
-fun UserAccount.toUserDetail(): UserDetail = UserDetail(
+fun UserAccount.toUserAccountDetails(): UserAccountDetails = UserAccountDetails(
   username = this.username,
   staffId = this.user.legacyStaffId,
   firstName = this.user.firstName.capitalizeFully(),
