@@ -94,4 +94,8 @@ enum class PrisonUserDomainEventType(
     "prison-users.user.account.unlocked",
     "Prison user account has been unlocked",
   ),
+  USER_NAME_UPDATED(
+    "prison-users.user.name.updated",
+    "Prison user name has been updated",
+  ),
 }

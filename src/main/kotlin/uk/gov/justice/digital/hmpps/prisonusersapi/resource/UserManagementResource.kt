@@ -112,6 +112,11 @@ class UserManagementResource(
         description = "Incorrect permissions to change the name a user",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Data integrity violation or sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun changeName(
@@ -121,11 +126,24 @@ class UserManagementResource(
     username: String,
     @Schema(description = "Staff name details", required = true) @RequestBody @Valid
     nameDetails: NameDetail,
-  ): UserDetails = userService.updateFirstAndLastName(
-    username = username,
-    firstName = nameDetails.firstName,
-    lastName = nameDetails.lastName,
-  )
+  ): UserDetails {
+    val (userDetails, userAccount) = userService.updateFirstAndLastName(
+      username = username,
+      firstName = nameDetails.firstName,
+      lastName = nameDetails.lastName,
+    )
+
+    eventPublishService.publishEvent(
+      eventType = PrisonUserDomainEventType.USER_NAME_UPDATED,
+      additionalInformation = AdditionalInformation(
+        userId = userAccount.user.userId!!,
+        legacyStaffId = userDetails.staffId,
+        username = userAccount.username,
+      ),
+    )
+
+    return userDetails
+  }
 }
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

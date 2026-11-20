@@ -73,13 +73,14 @@ class UserService(
     administered = userCaseloadMemberRepository.isAdministeredBy(username, localAdministratorUsername),
   )
 
-  fun updateFirstAndLastName(username: String, firstName: String, lastName: String): UserDetails {
+  fun updateFirstAndLastName(username: String, firstName: String, lastName: String): Pair<UserDetails, UserAccount> {
     val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
     return syncLockTemplate.execute(legacyStaffId) {
       val userAccount = userAccountRepository.findById(username)
         .orElseThrow(UserNotFoundException("User $username not found"))
       updateUserName(userAccount, firstName, lastName)
+      Pair(updateUserName(userAccount, firstName, lastName), userAccount)
     }
   }
 

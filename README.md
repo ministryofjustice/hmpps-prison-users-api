@@ -20,6 +20,7 @@ TODO
 This service publishes a number of domain events to the HMPPS domain event bus, as follows:
 
 - `prison-users.user.account.unlocked` domain event raised when a prison system user is unlocked.
+- `prison-users.user.name.updated` domain event raised when a prison system user's name is updated.
 
 ### Publish -> prison-users.user.account.unlocked
 The message is published via amazon sns. The payload is defined below.
@@ -29,6 +30,17 @@ The message is published via amazon sns. The payload is defined below.
    "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
    "version": 1, 
    "description": "Prison user account has been unlocked",   
+   "additionalInformation": { "userId": "11111111-2222-3333-4444-555555555555", "legacyStaffId": "12345", "username": "ATURNER_GEN" }
+}
+```
+### Publish -> prison-users.user.name.updated
+The message is published via amazon sns. The payload is defined below.
+```json
+{
+   "eventType": "prison-users.user.name.updated",
+   "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
+   "version": 1, 
+   "description": "Prison user name has been updated",   
    "additionalInformation": { "userId": "11111111-2222-3333-4444-555555555555", "legacyStaffId": "12345", "username": "ATURNER_GEN" }
 }
 ```
