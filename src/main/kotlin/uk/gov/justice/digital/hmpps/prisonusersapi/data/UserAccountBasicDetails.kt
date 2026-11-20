@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Basic User Information")
-data class UserBasicDetails(
+data class UserAccountBasicDetails(
   @Schema(description = "Username", example = "testuser1", required = true) val username: String,
   @Schema(description = "Staff ID", example = "324323", required = true) val staffId: Long,
   @Schema(description = "First name of the user", example = "John", required = true) val firstName: String,

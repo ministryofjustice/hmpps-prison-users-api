@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service.converters
 
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserCaseload
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.reconciliation.PrisonUserEmail
@@ -12,6 +13,19 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadAdministrator
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserCaseloadMember
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserRole
+
+fun User.toUserDetails(
+  generalAccount: UserAccount?,
+  adminAccount: UserAccount?,
+): UserDetails = UserDetails(
+  staffId = legacyStaffId,
+  firstName = firstName,
+  lastName = lastName,
+  status = status.name,
+  primaryEmail = primaryEmail(),
+  generalAccount = generalAccount?.toUserAccountCaseloadDetail(),
+  adminAccount = adminAccount?.toUserAccountCaseloadDetail(),
+)
 
 fun User.toPrisonUserReconciliationResponse(
   accounts: List<UserAccount>,

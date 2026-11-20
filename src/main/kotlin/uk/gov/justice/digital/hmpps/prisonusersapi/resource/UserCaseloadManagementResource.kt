@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserCaseloadDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 
 @RestController
@@ -73,5 +73,5 @@ class UserCaseloadManagementResource(
     @Schema(description = "Username", example = "TEST_USER1", required = true)
     @PathVariable
     username: String,
-  ): UserCaseloadDetail = userService.getCaseloads(username)
+  ): UserAccountCaseloadDetail = userService.getCaseloads(username)
 }

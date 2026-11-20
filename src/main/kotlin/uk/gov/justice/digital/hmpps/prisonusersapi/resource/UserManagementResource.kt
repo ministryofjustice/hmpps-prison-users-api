@@ -1,10 +1,13 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -12,10 +15,12 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.AdditionalInformation
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.EventPublishService
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.PrisonUserDomainEventType
@@ -79,4 +84,63 @@ class UserManagementResource(
       ),
     )
   }
+
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_ACCESS_ROLES_ADMIN')")
+  @PutMapping("/{username}/change-name")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Change staff name of user account",
+    description = "Change staff name of user account. Requires role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN",
+    security = [SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES_ADMIN")],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User account name changed",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Incorrect request to change name of user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to change the name a user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun changeName(
+    @Schema(description = "Username", example = "TEST_USER1", required = true)
+    @PathVariable
+    @Size(max = 30, min = 1, message = "username must be between 1 and 30 characters")
+    username: String,
+    @Schema(description = "Staff name details", required = true) @RequestBody @Valid
+    nameDetails: NameDetail,
+  ): UserDetails = userService.updateFirstAndLastName(
+    username = username,
+    firstName = nameDetails.firstName,
+    lastName = nameDetails.lastName,
+  )
 }
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "Name Information")
+data class NameDetail(
+  @Schema(description = "First name of the user", example = "John", required = true)
+  @field:Pattern(
+    regexp = "^[A-Za-z'-]{1,35}$",
+    message = "First name must consist of alphabetical characters, a hyphen or an apostrophe only and a max 35 chars",
+  )
+  val firstName: String,
+  @Schema(description = "Last name of the user", example = "Smith", required = true)
+  @field:Pattern(
+    regexp = "^[A-Za-z'-]{1,35}$",
+    message = "Last name must consist of alphabetical characters, a hyphen or an apostrophe only and a max 35 chars",
+  )
+  val lastName: String,
+)

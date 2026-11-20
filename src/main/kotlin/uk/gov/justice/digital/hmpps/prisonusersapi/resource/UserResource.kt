@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.prisonusersapi.config.ErrorResponse
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAdministeredBy
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.UserService
 
 @RestController
@@ -145,7 +145,7 @@ class UserResource(
     @Schema(description = "Username", example = "testuser1", required = true)
     @PathVariable
     username: String,
-  ): UserDetail {
+  ): UserAccountDetails {
     log.info("Fetching user details for : {}", username)
     val userDetail = userService.findByUsername(username)
     log.info("Returning user details for : {}", username)

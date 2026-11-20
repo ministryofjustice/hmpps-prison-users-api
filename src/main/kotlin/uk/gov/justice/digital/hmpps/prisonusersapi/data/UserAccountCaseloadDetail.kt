@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "User & Caseload Information")
-data class UserCaseloadDetail(
+data class UserAccountCaseloadDetail(
   @Schema(description = "Username", example = "TESTUSER1", required = true) val username: String,
   @Schema(description = "Indicates that the user is active", example = "true", required = true) val active: Boolean,
   @Schema(

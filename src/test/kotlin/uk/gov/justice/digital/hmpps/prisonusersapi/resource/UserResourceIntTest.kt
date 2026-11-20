@@ -24,7 +24,7 @@ class UserResourceIntTest(
 
   @DisplayName("GET /users/basic/{username}")
   @Nested
-  inner class GetUserBasicDetailsByUsername {
+  inner class GetUserAccountBasicDetailsByUsername {
 
     @BeforeEach
     internal fun createUsers() {
@@ -123,7 +123,7 @@ class UserResourceIntTest(
 
   @DisplayName("POST /users/basic/find-by-usernames")
   @Nested
-  inner class FindUserBasicDetailsByUsernames {
+  inner class FindUserAccountBasicDetailsByUsernames {
     val uri = "/users/basic/find-by-usernames"
 
     @BeforeEach

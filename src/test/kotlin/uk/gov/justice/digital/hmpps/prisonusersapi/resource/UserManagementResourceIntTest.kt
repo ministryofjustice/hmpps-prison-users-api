@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
-import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetail
+import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
@@ -121,16 +121,16 @@ class UserManagementResourceIntTest(
 
     @Test
     fun `should unlock user and post correct domain event`() {
-      val userDetail = webTestClient.get().uri("/users/marco.rossi")
+      val userAccountDetails = webTestClient.get().uri("/users/marco.rossi")
         .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
         .exchange()
         .expectStatus().isOk
-        .expectBody<UserDetail>()
+        .expectBody<UserAccountDetails>()
         .returnResult()
         .responseBody!!
 
-      assertThat(userDetail.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
-      assertThat(userDetail.accountNonLocked).isEqualTo(false)
+      assertThat(userAccountDetails.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
+      assertThat(userAccountDetails.accountNonLocked).isEqualTo(false)
 
       webTestClient.put().uri("/users/marco.rossi/unlock-user")
         .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
@@ -147,8 +147,8 @@ class UserManagementResourceIntTest(
 
       assertThatDomainEventWasSent(
         eventType = "prison-users.user.account.unlocked",
-        legacyStaffId = userDetail.staffId,
-        username = userDetail.username,
+        legacyStaffId = userAccountDetails.staffId,
+        username = userAccountDetails.username,
       )
     }
   }
