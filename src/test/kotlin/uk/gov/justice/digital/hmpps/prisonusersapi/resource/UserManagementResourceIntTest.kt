@@ -230,6 +230,16 @@ class UserManagementResourceIntTest(
       }
 
       @Test
+      fun `first name must not be empty`() {
+        assertInvalidName(firstName = "", lastName = "Rossi")
+      }
+
+      @Test
+      fun `last name must not be empty`() {
+        assertInvalidName(firstName = "Marco", lastName = "")
+      }
+
+      @Test
       fun `first name must not exceed 35 characters`() {
         assertInvalidName(firstName = "A".repeat(36), lastName = "Rossi")
       }
