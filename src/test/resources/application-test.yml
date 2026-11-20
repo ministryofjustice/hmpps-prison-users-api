@@ -23,7 +23,8 @@ hmpps.sqs:
       subscribeTopicId: domainevents
       subscribeFilter: >-
         {"eventType": [
-          {"prefix": "prison-users.user.account."}
+          {"prefix": "prison-users.user.account."},
+          {"prefix": "prison-users.user.name."}
         ]}
   topics:
     domainevents:
