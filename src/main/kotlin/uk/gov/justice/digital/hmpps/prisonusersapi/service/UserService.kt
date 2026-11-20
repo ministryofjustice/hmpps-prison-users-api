@@ -78,6 +78,7 @@ class UserService(
       .orElseThrow(UserNotFoundException("User $username not found"))
     return syncLockTemplate.execute(legacyStaffId) {
       val userAccount = userAccountRepository.findById(username)
+        .filter { it.user.legacyStaffId == legacyStaffId }
         .orElseThrow(UserNotFoundException("User $username not found"))
       updateUserName(userAccount, firstName, lastName)
       Pair(updateUserName(userAccount, firstName, lastName), userAccount)
