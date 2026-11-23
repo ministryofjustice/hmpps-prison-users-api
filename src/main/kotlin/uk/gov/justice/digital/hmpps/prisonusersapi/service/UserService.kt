@@ -112,9 +112,7 @@ class UserService(
       ),
     )
     usersRepository.save(userAccount.user)
-    findGeneralAndAdminAccounts(userAccount).let { (general, admin) ->
-      return userAccount.user.toUserDetails(general, admin)
-    }
+    return createUserDetails(userAccount)
   }
 
   private fun updateUserName(
@@ -125,9 +123,7 @@ class UserService(
     userAccount.user.firstName = firstName
     userAccount.user.lastName = lastName
     usersRepository.save(userAccount.user)
-    findGeneralAndAdminAccounts(userAccount).let { (general, admin) ->
-      return userAccount.user.toUserDetails(general, admin)
-    }
+    return createUserDetails(userAccount)
   }
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
@@ -136,11 +132,11 @@ class UserService(
     return userAccountRepository.save(userAccount)
   }
 
-  private fun findGeneralAndAdminAccounts(userAccount: UserAccount): Pair<UserAccount?, UserAccount?> {
+  private fun createUserDetails(userAccount: UserAccount): UserDetails {
     val userAccounts = userAccountRepository.findAllByUserUserId(userAccount.user.userId!!)
     val generalAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.GENERAL }
     val adminAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.ADMIN }
-    return Pair(generalAccount, adminAccount)
+    return userAccount.user.toUserDetails(generalAccount, adminAccount)
   }
 
   companion object {
