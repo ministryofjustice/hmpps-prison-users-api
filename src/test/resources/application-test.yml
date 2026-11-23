@@ -24,7 +24,8 @@ hmpps.sqs:
       subscribeFilter: >-
         {"eventType": [
           {"prefix": "prison-users.user.account."},
-          {"prefix": "prison-users.user.name."}
+          {"prefix": "prison-users.user.name."},
+          {"prefix": "prison-users.user.email."}
         ]}
   topics:
     domainevents:
