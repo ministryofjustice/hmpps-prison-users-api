@@ -147,7 +147,7 @@ class UserManagementResource(
   }
 
   @PreAuthorize("hasRole('ROLE_MAINTAIN_ACCESS_ROLES_ADMIN')")
-  @PutMapping("/{username}/change-email")
+  @PutMapping("/{username}/change-email", consumes = [MediaType.TEXT_PLAIN_VALUE])
   @ResponseStatus(HttpStatus.OK)
   @Operation(
     summary = "Change email of user account",
