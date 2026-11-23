@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAcco
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccountCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserDetails
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.function.Supplier
@@ -32,6 +33,7 @@ class UserService(
   private val syncLockTemplate: SyncLockTemplate,
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
   private val clock: Clock,
+  private val hmppsAuthenticationHolder: HmppsAuthenticationHolder
 ) {
 
   @Transactional(readOnly = true)
@@ -106,7 +108,7 @@ class UserService(
       UserEmail(
         email = email,
         isPrimary = true,
-        createdBy = "prison-users-api",
+        createdBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId,
         createdTimestamp = LocalDateTime.now(clock),
         user = userAccount.user,
       ),
