@@ -33,7 +33,7 @@ class UserService(
   private val syncLockTemplate: SyncLockTemplate,
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
   private val clock: Clock,
-  private val hmppsAuthenticationHolder: HmppsAuthenticationHolder
+  private val hmppsAuthenticationHolder: HmppsAuthenticationHolder,
 ) {
 
   @Transactional(readOnly = true)
