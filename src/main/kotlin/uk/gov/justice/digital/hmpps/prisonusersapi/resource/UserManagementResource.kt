@@ -188,7 +188,6 @@ class UserManagementResource(
     @Schema(description = "Email", example = "test@test.com", required = true)
     @Email(message = "Invalid email address")
     @RequestBody
-    @Valid
     email: String,
   ): UserDetails {
     val (userDetails, userAccount) = userService.updateEmail(
