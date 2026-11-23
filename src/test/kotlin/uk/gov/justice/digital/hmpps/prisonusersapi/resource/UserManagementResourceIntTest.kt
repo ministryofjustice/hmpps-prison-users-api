@@ -471,6 +471,29 @@ class UserManagementResourceIntTest(
     @Nested
     inner class HappyPath {
       @Test
+      fun `should handle update using the existing email address`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("marco.rossi@example.com")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<UserDetails>()
+          .returnResult()
+          .responseBody!!
+          .also {
+            assertThat(it.primaryEmail).isEqualTo("marco.rossi@example.com")
+            assertThat(it.staffId).isEqualTo(legacyStaffId)
+          }
+
+        webTestClient.get().uri("/users/marco.rossi")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.primaryEmail").isEqualTo("marco.rossi@example.com")
+      }
+
+      @Test
       fun `should update user email and publish correct domain event`() {
         webTestClient.put().uri("/users/marco.rossi/change-email")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
