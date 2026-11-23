@@ -45,6 +45,18 @@ The message is published via amazon sns. The payload is defined below.
 }
 ```
 
+### Publish -> prison-users.user.email.updated
+The message is published via amazon sns. The payload is defined below.
+```json
+{
+   "eventType": "prison-users.user.email.updated",
+   "occurredAt": "2021-02-08T14:41:11.526762Z", // ISO offset date time when the event occurred
+   "version": 1, 
+   "description": "Prison user email has been updated",   
+   "additionalInformation": { "userId": "11111111-2222-3333-4444-555555555555", "legacyStaffId": "12345", "username": "ATURNER_GEN" }
+}
+```
+
 ## Running the application locally
 
 The application comes with a `dev` spring profile that includes default settings for running locally. This is not
