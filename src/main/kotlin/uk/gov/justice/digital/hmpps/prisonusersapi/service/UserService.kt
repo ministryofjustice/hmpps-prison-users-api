@@ -101,6 +101,7 @@ class UserService(
 
   private fun updateUserEmail(userAccount: UserAccount, email: String): UserDetails {
     userAccount.user.userEmails.clear()
+    usersRepository.flush()
     userAccount.user.addUserEmail(
       UserEmail(
         email = email,
