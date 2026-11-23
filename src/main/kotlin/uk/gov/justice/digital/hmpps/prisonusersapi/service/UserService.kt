@@ -124,13 +124,20 @@ class UserService(
   ): UserDetails {
     userAccount.user.firstName = firstName
     userAccount.user.lastName = lastName
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     usersRepository.save(userAccount.user)
     return createUserDetails(userAccount)
   }
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
     userAccount.user.status = UserStatus.ACTIVE
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     userAccount.accountStatus = AccountStatus.OPEN
+    userAccount.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.modifiedTimestamp = LocalDateTime.now(clock)
+
     return userAccountRepository.save(userAccount)
   }
 
