@@ -50,6 +50,7 @@
   - `UserAccount.caseloads` (default): used by `UserAccountRepository.findById()`
   Preserve or update the graph when adding fields that must be eagerly available to converters.
 - Tests build data through `integration/helper/EntityDataLoader.kt` (`DataBuilder`) and authenticate with `JwtAuthorisationHelper` via `IntegrationTestBase.setAuthorisation()`.
+- `IntegrationTestBase` imports `config/TestConfig.kt`, which supplies a fixed UTC clock to application services. Assert application-generated timestamps against `TestConfig.FIXED_TIME`; framework-generated timestamps such as build metadata and Envers revisions use their own clocks.
 - Domain-event integration tests use `SqsIntegrationTestBase` and LocalStack; its test queue subscribes using the event prefixes in `src/test/resources/application-test.yml`. Add a matching prefix when testing a new event type.
 - Existing tests prefer nested classes per endpoint/scenario and assert both auth behaviour and payload shape (`resource/UserResourceIntTest.kt`).
 
