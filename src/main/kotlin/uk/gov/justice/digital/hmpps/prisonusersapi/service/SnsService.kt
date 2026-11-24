@@ -98,4 +98,8 @@ enum class PrisonUserDomainEventType(
     "prison-users.user.name.updated",
     "Prison user name has been updated",
   ),
+  USER_EMAIL_UPDATED(
+    "prison-users.user.email.updated",
+    "Prison user email has been updated",
+  ),
 }

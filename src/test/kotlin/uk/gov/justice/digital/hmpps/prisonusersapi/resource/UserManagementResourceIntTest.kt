@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.expectBody
+import uk.gov.justice.digital.hmpps.prisonusersapi.config.TestConfig.Companion.FIXED_TIME
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetails
@@ -16,12 +17,13 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTes
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
-import java.time.LocalDateTime
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 
 @TestPropertySource(properties = ["sync.lock.max-wait-ms=100"])
 class UserManagementResourceIntTest(
   @Autowired private val dataBuilder: DataBuilder,
   @Autowired private val syncLockRepository: SyncLockRepository,
+  @Autowired private val userAccountRepository: UserAccountRepository,
 ) : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /{username}/unlock-user")
@@ -99,7 +101,7 @@ class UserManagementResourceIntTest(
         syncLockRepository.saveAndFlush(
           SyncLock(
             legacyStaffId = legacyStaffId,
-            lockedAt = LocalDateTime.now(),
+            lockedAt = FIXED_TIME,
             lockedBy = "another-sync",
           ),
         )
@@ -144,10 +146,21 @@ class UserManagementResourceIntTest(
         assertThat(userAccountDetails.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
         assertThat(userAccountDetails.accountNonLocked).isEqualTo(false)
 
+        val originalAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(originalAccount.modifiedBy).isNull()
+        assertThat(originalAccount.modifiedTimestamp).isNull()
+        assertThat(originalAccount.user.modifiedBy).isNull()
+        assertThat(originalAccount.user.modifiedTimestamp).isNull()
+
         webTestClient.put().uri("/users/marco.rossi/unlock-user")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
           .exchange()
           .expectStatus().isOk
+        val updatedAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(updatedAccount.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.modifiedTimestamp).isEqualTo(FIXED_TIME)
+        assertThat(updatedAccount.user.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.user.modifiedTimestamp).isEqualTo(FIXED_TIME)
 
         webTestClient.get().uri("/users/marco.rossi")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
@@ -283,7 +296,7 @@ class UserManagementResourceIntTest(
         syncLockRepository.saveAndFlush(
           SyncLock(
             legacyStaffId = legacyStaffId,
-            lockedAt = LocalDateTime.now(),
+            lockedAt = FIXED_TIME,
             lockedBy = "another-sync",
           ),
         )
@@ -318,6 +331,10 @@ class UserManagementResourceIntTest(
     inner class HappyPath {
       @Test
       fun `should update user name and publish correct domain event`() {
+        val originalUser = userAccountRepository.findById("marco.rossi").orElseThrow().user
+        assertThat(originalUser.modifiedBy).isNull()
+        assertThat(originalUser.modifiedTimestamp).isNull()
+
         webTestClient.put().uri("/users/marco.rossi/change-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
           .bodyValue(mapOf("firstName" to "Jane", "lastName" to "O'Neil"))
@@ -331,6 +348,9 @@ class UserManagementResourceIntTest(
             assertThat(it.lastName).isEqualTo("O'Neil")
             assertThat(it.staffId).isEqualTo(legacyStaffId)
           }
+        val updatedUser = userAccountRepository.findById("marco.rossi").orElseThrow().user
+        assertThat(updatedUser.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedUser.modifiedTimestamp).isEqualTo(FIXED_TIME)
 
         webTestClient.get().uri("/users/marco.rossi")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
@@ -342,6 +362,183 @@ class UserManagementResourceIntTest(
 
         assertThatDomainEventWasSent(
           eventType = "prison-users.user.name.updated",
+          legacyStaffId = legacyStaffId,
+          username = "marco.rossi",
+        )
+      }
+    }
+  }
+
+  @DisplayName("PUT /{username}/change-email")
+  @Nested
+  inner class ChangeEmail {
+    private var legacyStaffId: Long = 0
+
+    @BeforeEach
+    internal fun createUser() {
+      legacyStaffId = with(dataBuilder) {
+        generalUser()
+          .username("marco.rossi")
+          .firstName("Marco")
+          .lastName("Rossi")
+          .withPrimaryEmail("marco.rossi@example.com")
+          .buildAndSave()
+          .user.legacyStaffId
+      }
+    }
+
+    @AfterEach
+    internal fun deleteUsers() {
+      dataBuilder.deleteAll()
+    }
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf()))
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `email must be valid`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("not-an-email")
+          .exchange()
+          .expectStatus().isBadRequest
+      }
+
+      @Test
+      fun `username must not exceed 30 characters`() {
+        webTestClient.put().uri("/users/thisusernameiswaytoolongtobevalid/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isBadRequest
+      }
+    }
+
+    @Nested
+    inner class Failure {
+      @Test
+      fun `user not found`() {
+        webTestClient.put().uri("/users/not-found/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isNotFound
+      }
+
+      @Test
+      fun `should return conflict when sync lock is not available`() {
+        syncLockRepository.saveAndFlush(
+          SyncLock(
+            legacyStaffId = legacyStaffId,
+            lockedAt = FIXED_TIME,
+            lockedBy = "another-sync",
+          ),
+        )
+
+        try {
+          webTestClient.put().uri("/users/marco.rossi/change-email")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+            .bodyValue("marco.new@example.com")
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(409)
+            .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+            .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+          assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+
+          webTestClient.get().uri("/users/marco.rossi")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.primaryEmail").isEqualTo("marco.rossi@example.com")
+        } finally {
+          syncLockRepository.deleteById(legacyStaffId)
+        }
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `should handle update using the existing email address`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("marco.rossi@example.com")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<UserDetails>()
+          .returnResult()
+          .responseBody!!
+          .also {
+            assertThat(it.primaryEmail).isEqualTo("marco.rossi@example.com")
+            assertThat(it.staffId).isEqualTo(legacyStaffId)
+          }
+
+        webTestClient.get().uri("/users/marco.rossi")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.primaryEmail").isEqualTo("marco.rossi@example.com")
+      }
+
+      @Test
+      fun `should update user email and publish correct domain event`() {
+        webTestClient.put().uri("/users/marco.rossi/change-email")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .bodyValue("marco.new@example.com")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<UserDetails>()
+          .returnResult()
+          .responseBody!!
+          .also {
+            assertThat(it.firstName).isEqualTo("Marco")
+            assertThat(it.lastName).isEqualTo("Rossi")
+            assertThat(it.primaryEmail).isEqualTo("marco.new@example.com")
+            assertThat(it.staffId).isEqualTo(legacyStaffId)
+          }
+
+        webTestClient.get().uri("/users/marco.rossi")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.primaryEmail").isEqualTo("marco.new@example.com")
+
+        assertThatDomainEventWasSent(
+          eventType = "prison-users.user.email.updated",
           legacyStaffId = legacyStaffId,
           username = "marco.rossi",
         )

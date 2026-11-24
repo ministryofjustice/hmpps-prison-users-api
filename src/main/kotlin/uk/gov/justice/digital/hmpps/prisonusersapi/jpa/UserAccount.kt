@@ -108,8 +108,8 @@ data class UserAccount(
 
   val lastLoggedIn: LocalDateTime? = null,
 
-  val modifiedTimestamp: LocalDateTime? = null,
-  val modifiedBy: String? = null,
+  var modifiedTimestamp: LocalDateTime? = null,
+  var modifiedBy: String? = null,
 ) {
 
   fun isLocked(): Boolean = accountStatus.isLocked

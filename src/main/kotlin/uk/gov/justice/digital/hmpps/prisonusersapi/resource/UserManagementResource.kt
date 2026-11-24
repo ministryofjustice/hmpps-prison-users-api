@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
@@ -135,6 +136,67 @@ class UserManagementResource(
 
     eventPublishService.publishEvent(
       eventType = PrisonUserDomainEventType.USER_NAME_UPDATED,
+      additionalInformation = AdditionalInformation(
+        userId = userAccount.user.userId!!,
+        legacyStaffId = userDetails.staffId,
+        username = userAccount.username,
+      ),
+    )
+
+    return userDetails
+  }
+
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_ACCESS_ROLES_ADMIN')")
+  @PutMapping("/{username}/change-email", consumes = [MediaType.TEXT_PLAIN_VALUE])
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Change email of user account",
+    description = "Change email of user account. Requires role ROLE_MAINTAIN_ACCESS_ROLES_ADMIN",
+    security = [SecurityRequirement(name = "MAINTAIN_ACCESS_ROLES_ADMIN")],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User account email changed",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Incorrect request to change email of user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to change the email a user",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Data integrity violation or sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun changeEmail(
+    @Schema(description = "Username", example = "TEST_USER1", required = true)
+    @PathVariable
+    @Size(max = 30, min = 1, message = "username must be between 1 and 30 characters")
+    username: String,
+    @Schema(description = "Email", example = "test@test.com", required = true)
+    @Email(message = "Invalid email address")
+    @RequestBody
+    email: String,
+  ): UserDetails {
+    val (userDetails, userAccount) = userService.updateEmail(
+      username = username,
+      email = email,
+    )
+
+    eventPublishService.publishEvent(
+      eventType = PrisonUserDomainEventType.USER_EMAIL_UPDATED,
       additionalInformation = AdditionalInformation(
         userId = userAccount.user.userId!!,
         legacyStaffId = userDetails.staffId,
