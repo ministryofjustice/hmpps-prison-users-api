@@ -16,12 +16,16 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.SqsIntegrationTes
 import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilder
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import java.time.Clock
 import java.time.LocalDateTime
 
 @TestPropertySource(properties = ["sync.lock.max-wait-ms=100"])
 class UserManagementResourceIntTest(
   @Autowired private val dataBuilder: DataBuilder,
   @Autowired private val syncLockRepository: SyncLockRepository,
+  @Autowired private val userAccountRepository: UserAccountRepository,
+  @Autowired private val clock: Clock,
 ) : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /{username}/unlock-user")
@@ -144,10 +148,24 @@ class UserManagementResourceIntTest(
         assertThat(userAccountDetails.accountStatus).isEqualTo(AccountStatus.EXPIRED_LOCKED)
         assertThat(userAccountDetails.accountNonLocked).isEqualTo(false)
 
+        val originalAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(originalAccount.modifiedBy).isNull()
+        assertThat(originalAccount.modifiedTimestamp).isNull()
+        assertThat(originalAccount.user.modifiedBy).isNull()
+        assertThat(originalAccount.user.modifiedTimestamp).isNull()
+
+        val beforeUpdate = LocalDateTime.now(clock).minusNanos(1_000_000)
         webTestClient.put().uri("/users/marco.rossi/unlock-user")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
           .exchange()
           .expectStatus().isOk
+        val afterUpdate = LocalDateTime.now(clock).plusNanos(1_000_000)
+
+        val updatedAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(updatedAccount.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.modifiedTimestamp).isBetween(beforeUpdate, afterUpdate)
+        assertThat(updatedAccount.user.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.user.modifiedTimestamp).isBetween(beforeUpdate, afterUpdate)
 
         webTestClient.get().uri("/users/marco.rossi")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
@@ -318,6 +336,11 @@ class UserManagementResourceIntTest(
     inner class HappyPath {
       @Test
       fun `should update user name and publish correct domain event`() {
+        val originalUser = userAccountRepository.findById("marco.rossi").orElseThrow().user
+        assertThat(originalUser.modifiedBy).isNull()
+        assertThat(originalUser.modifiedTimestamp).isNull()
+
+        val beforeUpdate = LocalDateTime.now(clock).minusNanos(1_000_000)
         webTestClient.put().uri("/users/marco.rossi/change-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
           .bodyValue(mapOf("firstName" to "Jane", "lastName" to "O'Neil"))
@@ -331,6 +354,11 @@ class UserManagementResourceIntTest(
             assertThat(it.lastName).isEqualTo("O'Neil")
             assertThat(it.staffId).isEqualTo(legacyStaffId)
           }
+        val afterUpdate = LocalDateTime.now(clock).plusNanos(1_000_000)
+
+        val updatedUser = userAccountRepository.findById("marco.rossi").orElseThrow().user
+        assertThat(updatedUser.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedUser.modifiedTimestamp).isBetween(beforeUpdate, afterUpdate)
 
         webTestClient.get().uri("/users/marco.rossi")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
