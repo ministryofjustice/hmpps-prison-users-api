@@ -47,8 +47,8 @@ data class User(
   val legacyStaffId: Long,
   val createdTimestamp: LocalDateTime,
   val createdBy: String,
-  val modifiedTimestamp: LocalDateTime? = null,
-  val modifiedBy: String? = null,
+  var modifiedTimestamp: LocalDateTime? = null,
+  var modifiedBy: String? = null,
 ) {
 
   fun addUserEmail(userEmail: UserEmail) {

@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserAdministeredBy
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
@@ -19,6 +20,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAcco
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccountCaseloadDetail
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserAccountDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.service.converters.toUserDetails
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
+import java.time.Clock
+import java.time.LocalDateTime
 import java.util.function.Supplier
 
 @Service
@@ -28,6 +32,8 @@ class UserService(
   private val userAccountRepository: UserAccountRepository,
   private val syncLockTemplate: SyncLockTemplate,
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
+  private val clock: Clock,
+  private val hmppsAuthenticationHolder: HmppsAuthenticationHolder,
 ) {
 
   @Transactional(readOnly = true)
@@ -84,24 +90,62 @@ class UserService(
     }
   }
 
-  fun updateUserName(
+  fun updateEmail(username: String, email: String): Pair<UserDetails, UserAccount> {
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .filter { it.user.legacyStaffId == legacyStaffId }
+        .orElseThrow(UserNotFoundException("User $username not found"))
+      Pair(updateUserEmail(userAccount, email), userAccount)
+    }
+  }
+
+  private fun updateUserEmail(userAccount: UserAccount, email: String): UserDetails {
+    userAccount.user.userEmails.clear()
+    usersRepository.flush()
+    userAccount.user.addUserEmail(
+      UserEmail(
+        email = email,
+        isPrimary = true,
+        createdBy = hmppsAuthenticationHolder.principal,
+        createdTimestamp = LocalDateTime.now(clock),
+        user = userAccount.user,
+      ),
+    )
+    usersRepository.save(userAccount.user)
+    return createUserDetails(userAccount)
+  }
+
+  private fun updateUserName(
     userAccount: UserAccount,
     firstName: String,
     lastName: String,
   ): UserDetails {
     userAccount.user.firstName = firstName
     userAccount.user.lastName = lastName
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     usersRepository.save(userAccount.user)
-    val userAccounts = userAccountRepository.findAllByUserUserId(userAccount.user.userId!!)
-    val generalAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.GENERAL }
-    val adminAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.ADMIN }
-    return userAccount.user.toUserDetails(generalAccount, adminAccount)
+    return createUserDetails(userAccount)
   }
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
     userAccount.user.status = UserStatus.ACTIVE
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     userAccount.accountStatus = AccountStatus.OPEN
+    userAccount.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.modifiedTimestamp = LocalDateTime.now(clock)
+
     return userAccountRepository.save(userAccount)
+  }
+
+  private fun createUserDetails(userAccount: UserAccount): UserDetails {
+    val userAccounts = userAccountRepository.findAllByUserUserId(userAccount.user.userId!!)
+    val generalAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.GENERAL }
+    val adminAccount = userAccounts.firstOrNull { it.isActive() && it.accountType == UsageType.ADMIN }
+    return userAccount.user.toUserDetails(generalAccount, adminAccount)
   }
 
   companion object {
