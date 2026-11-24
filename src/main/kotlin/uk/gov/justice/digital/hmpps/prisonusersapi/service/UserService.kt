@@ -108,7 +108,7 @@ class UserService(
       UserEmail(
         email = email,
         isPrimary = true,
-        createdBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId,
+        createdBy = hmppsAuthenticationHolder.principal,
         createdTimestamp = LocalDateTime.now(clock),
         user = userAccount.user,
       ),
@@ -124,7 +124,7 @@ class UserService(
   ): UserDetails {
     userAccount.user.firstName = firstName
     userAccount.user.lastName = lastName
-    userAccount.user.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.principal
     userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     usersRepository.save(userAccount.user)
     return createUserDetails(userAccount)
@@ -132,10 +132,10 @@ class UserService(
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
     userAccount.user.status = UserStatus.ACTIVE
-    userAccount.user.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.user.modifiedBy = hmppsAuthenticationHolder.principal
     userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     userAccount.accountStatus = AccountStatus.OPEN
-    userAccount.modifiedBy = hmppsAuthenticationHolder.username ?: hmppsAuthenticationHolder.clientId
+    userAccount.modifiedBy = hmppsAuthenticationHolder.principal
     userAccount.modifiedTimestamp = LocalDateTime.now(clock)
 
     return userAccountRepository.save(userAccount)
