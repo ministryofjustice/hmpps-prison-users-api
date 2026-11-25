@@ -31,9 +31,9 @@ data class PrisonUserSyncRequest(
 
   @Schema(
     required = true,
-    description = "The status of the user e.g. ACTIVE/INACTIVE",
+    description = "The status of the user e.g. ACTIVE/INACT",
     type = "string",
-    allowableValues = ["ACTIVE", "INACTIVE"],
+    allowableValues = ["ACTIVE", "CAREER", "INACT", "MAT", "PAT", "SAB", "SICK", "SUS"],
   )
   val status: UserStatus,
 

@@ -61,7 +61,7 @@ class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
   fun `cleanup removes stale inactive user audit data and associated user records`() {
     val userId = UUID.randomUUID()
     val username = "stale-user-inactive"
-    insertStaleUser(userId, username, UserStatus.INACTIVE)
+    insertStaleUser(userId, username, UserStatus.INACT)
 
     userCleanupService.cleanup()
 
@@ -119,7 +119,7 @@ class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
   fun `cleanup ignores inactive users whose latest audit revision is newer than seven years`() {
     val userId = UUID.randomUUID()
     val username = "recent-inactive-user"
-    insertStaleUser(userId, username, UserStatus.INACTIVE, revisionAgeYears = 6)
+    insertStaleUser(userId, username, UserStatus.INACT, revisionAgeYears = 6)
 
     userCleanupService.cleanup()
 
@@ -137,7 +137,7 @@ class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
         mapOf("userId" to userId),
         String::class.java,
       ),
-    ).isEqualTo(UserStatus.INACTIVE.name)
+    ).isEqualTo(UserStatus.INACT.name)
 
     assertThat(countAuditRows("users_audit", "user_id", userId)).isEqualTo(1)
     assertThat(countAuditRows("user_account_audit", "user_id", userId)).isEqualTo(1)
@@ -152,7 +152,7 @@ class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
   fun `cleanup removes stale inactive audit data when live rows are already absent`() {
     val userId = UUID.randomUUID()
     val username = "stale-audit-only-user"
-    insertStaleUser(userId, username, UserStatus.INACTIVE, includeLiveData = false)
+    insertStaleUser(userId, username, UserStatus.INACT, includeLiveData = false)
 
     userCleanupService.cleanup()
 
@@ -179,7 +179,7 @@ class UserCleanupServiceIntTest : SqsIntegrationTestBase() {
       UUID.randomUUID() to "batched-stale-user-$index"
     }
     staleUsers.forEach { (userId, username) ->
-      insertStaleUser(userId, username, UserStatus.INACTIVE)
+      insertStaleUser(userId, username, UserStatus.INACT)
     }
 
     val activeUserId = UUID.randomUUID()
