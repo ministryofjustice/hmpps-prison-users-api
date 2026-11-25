@@ -25,7 +25,7 @@ data class PrisonUserReconciliationResponse(
   @Schema(required = true, description = "The last name of the user", type = "string", example = "Smith")
   val lastName: String,
 
-  @Schema(required = true, description = "The status of the user e.g. ACTIVE/INACTIVE", type = "string", allowableValues = ["ACTIVE", "INACTIVE"])
+  @Schema(required = true, description = "The status of the user e.g. ACTIVE/INACT", type = "string", allowableValues = ["ACTIVE", "CAREER", "INACT", "MAT", "PAT", "SAB", "SICK", "SUS"])
   val status: UserStatus,
 
   @Schema(required = true, description = "Record creation timestamp", type = "string", format = "date-time", example = "2022-01-01T12:00:00")

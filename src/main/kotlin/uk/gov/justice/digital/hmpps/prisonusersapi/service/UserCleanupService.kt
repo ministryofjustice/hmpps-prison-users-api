@@ -75,7 +75,7 @@ class UserCleanupService(
     SELECT ua.user_id
     FROM users_audit ua
     JOIN revinfo r ON r.rev = ua.rev
-    WHERE ua.status = 'INACTIVE'
+    WHERE ua.status = 'INACT'
     AND ua.rev = (
       SELECT MAX(ua2.rev)
       FROM users_audit ua2

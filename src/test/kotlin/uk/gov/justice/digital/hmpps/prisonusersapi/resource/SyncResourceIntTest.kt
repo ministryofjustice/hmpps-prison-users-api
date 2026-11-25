@@ -602,7 +602,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
             minimalSyncRequest(
               firstName = "UpdatedFirst",
               lastName = "UpdatedLast",
-              status = UserStatus.INACTIVE,
+              status = UserStatus.INACT,
               modifiedTimestamp = modifiedAt,
               modifiedBy = "SYNC_TEST",
             ),
@@ -621,7 +621,7 @@ class SyncResourceIntTest : IntegrationTestBase() {
         .expectBody()
         .jsonPath("firstName").isEqualTo("UpdatedFirst")
         .jsonPath("lastName").isEqualTo("UpdatedLast")
-        .jsonPath("status").isEqualTo("INACTIVE")
+        .jsonPath("status").isEqualTo("INACT")
     }
 
     // ── Email replacement ────────────────────────────────────────────────────
