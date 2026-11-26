@@ -101,6 +101,19 @@ class UserService(
     }
   }
 
+  fun recordLogonDate(username: String): Pair<UserDetails, UserAccount> {
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .filter { it.user.legacyStaffId == legacyStaffId }
+        .orElseThrow(UserNotFoundException("User $username not found"))
+      userAccount.lastLoggedIn = LocalDateTime.now(clock)
+      userAccountRepository.save(userAccount)
+      Pair(createUserDetails(userAccount), userAccount)
+    }
+  }
+
   private fun updateUserEmail(userAccount: UserAccount, email: String): UserDetails {
     userAccount.user.userEmails.clear()
     usersRepository.flush()

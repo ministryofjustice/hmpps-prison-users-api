@@ -102,4 +102,8 @@ enum class PrisonUserDomainEventType(
     "prison-users.user.email.updated",
     "Prison user email has been updated",
   ),
+  USER_LOGON_DATE_RECORDED(
+    "prison-users.user.logon.date.recorded",
+    "Prison user logon date has been recorded",
+  ),
 }
