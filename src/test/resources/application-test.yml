@@ -25,7 +25,8 @@ hmpps.sqs:
         {"eventType": [
           {"prefix": "prison-users.user.account."},
           {"prefix": "prison-users.user.name."},
-          {"prefix": "prison-users.user.email."}
+          {"prefix": "prison-users.user.email."},
+          {"prefix": "prison-users.user.logon."}
         ]}
   topics:
     domainevents:

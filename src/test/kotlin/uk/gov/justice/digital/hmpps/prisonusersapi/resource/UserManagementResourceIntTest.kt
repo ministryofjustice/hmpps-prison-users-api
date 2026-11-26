@@ -18,6 +18,9 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.integration.helper.DataBuilde
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.SyncLock
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.SyncLockRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 @TestPropertySource(properties = ["sync.lock.max-wait-ms=100"])
 class UserManagementResourceIntTest(
@@ -542,6 +545,165 @@ class UserManagementResourceIntTest(
           legacyStaffId = legacyStaffId,
           username = "marco.rossi",
         )
+      }
+    }
+  }
+
+  @DisplayName("POST /{username}/record-sign-in")
+  @Nested
+  inner class RecordSignIn {
+    private val previousLogon = LocalDateTime.of(2024, 1, 1, 10, 30)
+    private var legacyStaffId: Long = 0
+
+    @BeforeEach
+    internal fun createUser() {
+      legacyStaffId = with(dataBuilder) {
+        generalUser()
+          .username("marco.rossi")
+          .withLastLogonDate(previousLogon)
+          .buildAndSave()
+          .user.legacyStaffId
+      }
+    }
+
+    @AfterEach
+    internal fun deleteUser() {
+      dataBuilder.deleteAll()
+    }
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `requires authentication`() {
+        webTestClient.post().uri("/users/marco.rossi/record-sign-in")
+          .exchange()
+          .expectStatus().isUnauthorized
+        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(previousLogon)
+      }
+
+      @Test
+      fun `requires a role`() {
+        webTestClient.post().uri("/users/marco.rossi/record-sign-in")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(previousLogon)
+      }
+
+      @Test
+      fun `rejects incorrect role`() {
+        webTestClient.post().uri("/users/marco.rossi/record-sign-in")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_ACCESS_ROLES_ADMIN")))
+          .exchange()
+          .expectStatus().isForbidden
+        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(previousLogon)
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `username must not exceed 30 characters`() {
+        webTestClient.post().uri("/users/${"a".repeat(31)}/record-sign-in")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isBadRequest
+          .expectBody()
+          .jsonPath("$.status").isEqualTo(400)
+          .jsonPath("$.userMessage").value<String> { assertThat(it).contains("username must be between 1 and 30") }
+      }
+    }
+
+    @Nested
+    inner class Failure {
+      @Test
+      fun `user not found`() {
+        webTestClient.post().uri("/users/not-found/record-sign-in")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isNotFound
+          .expectBody()
+          .jsonPath("$.status").isEqualTo(404)
+          .jsonPath("$.userMessage").isEqualTo("User not found: User not-found not found")
+        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(previousLogon)
+      }
+
+      @Test
+      fun `returns conflict when sync lock is not available`() {
+        syncLockRepository.saveAndFlush(
+          SyncLock(
+            legacyStaffId = legacyStaffId,
+            lockedAt = FIXED_TIME,
+            lockedBy = "another-sync",
+          ),
+        )
+
+        try {
+          webTestClient.post().uri("/users/marco.rossi/record-sign-in")
+            .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(409)
+            .jsonPath("$.userMessage").isEqualTo("Conflict: Unable to acquire sync lock")
+            .jsonPath("$.developerMessage").isEqualTo("Timeout waiting for sync lock for legacy staff id $legacyStaffId")
+
+          assertThat(syncLockRepository.findById(legacyStaffId).orElseThrow().lockedBy).isEqualTo("another-sync")
+          assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(previousLogon)
+        } finally {
+          syncLockRepository.deleteById(legacyStaffId)
+        }
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `updates last login and publishes the domain event`() {
+        val originalAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(originalAccount.lastLoggedIn).isEqualTo(previousLogon)
+        val userId = originalAccount.user.userId
+
+        webTestClient.post().uri("/users/marco.rossi/record-sign-in")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().isEmpty
+
+        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(FIXED_TIME)
+        val event = getDomainEvents().single()
+        assertThat(event.eventType).isEqualTo("prison-users.user.logon.date.recorded")
+        assertThat(event.version).isEqualTo(1)
+        assertThat(OffsetDateTime.parse(event.occurredAt)).isEqualTo(FIXED_TIME.atOffset(ZoneOffset.UTC))
+        assertThat(event.description).isEqualTo("marco.rossi Prison user logon date has been recorded")
+        assertThat(event.additionalInformation?.userId).isEqualTo(userId)
+        assertThat(event.additionalInformation?.legacyStaffId).isEqualTo(legacyStaffId)
+        assertThat(event.additionalInformation?.username).isEqualTo("marco.rossi")
+      }
+
+      @Test
+      fun `records first sign in for a username of 30 characters`() {
+        val username = "a".repeat(30)
+        val account = with(dataBuilder) {
+          generalUser()
+            .username(username)
+            .legacyStaffId(654321)
+            .buildAndSave()
+        }
+        assertThat(account.lastLoggedIn).isNull()
+
+        webTestClient.post().uri("/users/$username/record-sign-in")
+          .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().isEmpty
+
+        assertThat(userAccountRepository.findById(username).orElseThrow().lastLoggedIn).isEqualTo(FIXED_TIME)
+        val event = getDomainEvents().single()
+        assertThat(event.eventType).isEqualTo("prison-users.user.logon.date.recorded")
+        assertThat(event.additionalInformation?.userId).isEqualTo(account.user.userId)
+        assertThat(event.additionalInformation?.legacyStaffId).isEqualTo(654321)
+        assertThat(event.additionalInformation?.username).isEqualTo(username)
       }
     }
   }
