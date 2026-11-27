@@ -16,15 +16,15 @@
   - `GET /users/{username}/caseloads` in `resource/UserCaseloadManagementResource.kt`
   - `GET /reference-data/caseloads` in `resource/ReferenceDataResource.kt`
   - `GET /reconciliation/user/{legacyStaffId}` in `resource/ReconciliationResource.kt` (fully wired to `service/ReconciliationService.kt` and repositories)
-- `resource/UserManagementResource.kt` provides `PUT /users/{username}/unlock-user`, `/change-name`, and `/change-email`. All three use the per-user sync lock and publish domain events. Unlock requires `ROLE_MANAGE_NOMIS_USER_ACCOUNT`; name and email changes require `ROLE_MAINTAIN_ACCESS_ROLES_ADMIN`.
-- Name changes update the user record's `modifiedBy` and `modifiedTimestamp`; unlock updates those fields on both the user and account. Email changes consume a `text/plain` address and replace all existing emails with one primary email, including when the address is unchanged. The new email's `createdBy` identifies the authenticated principal.
+- `resource/UserManagementResource.kt` provides `PUT /users/{username}/unlock-user`, `/change-name`, and `/change-email`, plus `POST /users/{username}/record-sign-in`. All use the per-user sync lock and publish domain events. Unlock and sign-in require `ROLE_MANAGE_NOMIS_USER_ACCOUNT`; name and email changes require `ROLE_MAINTAIN_ACCESS_ROLES_ADMIN`.
+- Name changes update the user record's `modifiedBy` and `modifiedTimestamp`; unlock updates those fields on both the user and account. Recording a sign-in updates the account's `lastLoggedIn` and `modifiedTimestamp` to the current time, sets `modifiedBy` to the authenticated principal, and publishes `prison-users.user.logon.date.recorded`. Email changes consume a `text/plain` address and replace all existing emails with one primary email, including when the address is unchanged. The new email's `createdBy` identifies the authenticated principal.
 - `PUT /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` is fully wired to `service/SyncService.kt` (transactional upsert + replace semantics for emails/accounts/roles/caseloads, with DB-backed per-user sync locking; see `service/SyncLockTemplate.kt` for lock mechanism).
 - `DELETE /sync/user/{legacyStaffId}` in `resource/SyncResource.kt` deletes a user and linked data.
 - Response DTOs for reconciliation and sync are in `data/reconciliation/` (e.g. `PrisonUserReconciliationResponse.kt`) and `data/sync/` (e.g. `PrisonUserSyncRequest.kt`), with converters like `User.toPrisonUserReconciliationResponse()` in `service/converters/FromUser.kt`.
 - Schema lives in Flyway SQL under `src/main/resources/db/prison-users/` (base migrations) and `src/main/resources/db/prison-users_postgresql/` (PostgreSQL-specific migrations, e.g. partial indexes).
 
 ## Local run / build / test
-- **Build tooling**: Kotlin, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.0.15. `hmpps-kotlin-spring-boot-starter` and `hmpps-kotlin-spring-boot-starter-test` are 3.1.0. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.2.0; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.48.
+- **Build tooling**: Kotlin, JVM 25; `build.gradle.kts` with `uk.gov.justice.hmpps.gradle-spring-boot` v11.1.2. `hmpps-kotlin-spring-boot-starter` and `hmpps-kotlin-spring-boot-starter-test` are 3.1.0. OpenAPI is `springdoc-openapi-starter-webmvc-ui` 3.2.0; test fixtures use `wiremock-standalone` 3.13.2 and `swagger-parser` 2.1.49.
 - Build the jar: `./gradlew clean assemble`
 - Build the Docker image locally by assembling first, copying `build/libs/*.jar` into the repository root, then running `docker build --build-arg GIT_REF=... --build-arg GIT_BRANCH=... --build-arg BUILD_NUMBER=... .`; the container expects `HMPPS_AUTH_URL` when started.
 - Run the app + HMPPS Auth in Docker: `docker compose pull && docker compose up`
@@ -42,6 +42,7 @@
 - Mapping logic belongs in `service/converters/`, not controllers. Example: `FromUserAccount.kt` title-cases names and strips DPS caseloads when `removeDpsCaseload = true`. For endpoints returning detailed response objects (e.g., `PrisonUserReconciliationResponse`), converters are extension functions on domain entities (e.g., `User.toPrisonUserReconciliationResponse()` in `FromUser.kt`). Email selection during sync is delegated to `PrimaryEmailDetector.getPrimaryEmail()`, which prioritizes `@justice.gov.uk` addresses.
 - Prison/caseload name formatting goes through `service/converters/PrisonNameFormat.kt` (`capitalizeLeavingAbbreviations()`), which keeps abbreviations such as `HMP`, `YOI`, and `VCC` uppercase when title-casing names.
 - `AccountStatusConverter` in `jpa/` is `@Converter(autoApply = true)` and persists `AccountStatus.desc`; keep enum descriptions aligned with the stored database values.
+- `UserStatusConverter` persists the `UserStatus` enum name, not its human-readable description; keep enum names aligned with stored values and sync/reconciliation payloads.
 - Reads are explicitly `@Transactional(readOnly = true)` in services (`service/UserService.kt`, `service/ReconciliationService.kt`); writes keep transactions at service level. `SyncService.kt` uses `TransactionTemplate` for fine-grained control, while `UserService.kt` uses `@Transactional`.
 - JPA entity graphs control loading and are declared as `@NamedEntityGraph` annotations (`jpa/UserAccount.kt`). Multiple graphs exist for different access patterns:
   - `UserAccount.withCaseloads`: used by `UserAccountRepository.findAllByUserUserId()` for full caseload details
@@ -62,7 +63,7 @@
 - Sync lock acquisition uses an insert in a separate transaction, not JPA merge. Each operation has a unique owner token and releases only its own lock after the service transaction commits or rolls back.
 - An abnormal process termination can leave a committed sync lock behind. Remove an orphan row only after confirming its owner is no longer running; locks do not expire automatically.
 - `EventPublishService` publishes management events to the `domainevents` SNS topic through `SnsService`; publication failures are logged and do not fail the request.
-- `springdoc-openapi-starter-webmvc-ui` 3.2.0 is used for API documentation; when updating, check compatibility with test utilities like `swagger-parser` 2.1.48.
+- `springdoc-openapi-starter-webmvc-ui` 3.2.0 is used for API documentation; when updating, check compatibility with test utilities like `swagger-parser` 2.1.49.
 - Deployment config is Helm-based under `helm_deploy/`; env-specific overrides (for example dev auth URL and Swagger enablement) are in `values-*.yaml`.
 - For broader HMPPS Kotlin conventions, see the "Common Kotlin patterns" section in `README.md` and the linked tech docs; the project is community managed via `#kotlin-dev`.
 - If you add endpoints, remember there are tests asserting security coverage and OpenAPI availability/validity (`integration/ResourceSecurityTest.kt`, `integration/OpenApiDocsTest.kt`).
