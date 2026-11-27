@@ -101,6 +101,17 @@ class UserService(
     }
   }
 
+  fun recordLogonDate(username: String): UserAccount {
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .filter { it.user.legacyStaffId == legacyStaffId }
+        .orElseThrow(UserNotFoundException("User $username not found"))
+      updateLastLoggedIn(userAccount)
+    }
+  }
+
   private fun updateUserEmail(userAccount: UserAccount, email: String): UserDetails {
     userAccount.user.userEmails.clear()
     usersRepository.flush()
@@ -128,6 +139,14 @@ class UserService(
     userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     usersRepository.save(userAccount.user)
     return createUserDetails(userAccount)
+  }
+
+  private fun updateLastLoggedIn(userAccount: UserAccount): UserAccount {
+    val now = LocalDateTime.now(clock)
+    userAccount.lastLoggedIn = now
+    userAccount.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.modifiedTimestamp = now
+    return userAccountRepository.save(userAccount)
   }
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {

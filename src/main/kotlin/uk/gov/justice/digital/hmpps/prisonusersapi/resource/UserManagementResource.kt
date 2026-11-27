@@ -15,6 +15,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -205,6 +206,63 @@ class UserManagementResource(
     )
 
     return userDetails
+  }
+
+  @PreAuthorize("hasRole('ROLE_MANAGE_NOMIS_USER_ACCOUNT')")
+  @PostMapping("/{username}/record-sign-in")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Record a user as having successfully signed in.",
+    description = "Record a user as having successfully signed in, with current date and time written to the LAST_LOGON_DATE. Requires role ROLE_MANAGE_NOMIS_USER_ACCOUNT",
+    security = [SecurityRequirement(name = "MANAGE_NOMIS_USER_ACCOUNT")],
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "User sign in recorded",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Incorrect request to record user sign-in",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Incorrect permissions to record the user sign-in",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "User not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Data integrity violation or sync lock could not be acquired within max wait time",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun recordSignIn(
+    @Schema(description = "Username", example = "testuser1", required = true)
+    @PathVariable
+    @Size(max = 30, min = 1, message = "username must be between 1 and 30")
+    username: String,
+  ) {
+    val userAccount = userService.recordLogonDate(username)
+
+    eventPublishService.publishEvent(
+      eventType = PrisonUserDomainEventType.USER_LOGON_DATE_RECORDED,
+      additionalInformation = AdditionalInformation(
+        userId = userAccount.user.userId!!,
+        legacyStaffId = userAccount.user.legacyStaffId,
+        username = userAccount.username,
+      ),
+    )
   }
 }
 
