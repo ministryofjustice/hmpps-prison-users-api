@@ -253,13 +253,13 @@ class UserManagementResource(
     @Size(max = 30, min = 1, message = "username must be between 1 and 30")
     username: String,
   ) {
-    val (userDetails, userAccount) = userService.recordLogonDate(username)
+    val userAccount = userService.recordLogonDate(username)
 
     eventPublishService.publishEvent(
       eventType = PrisonUserDomainEventType.USER_LOGON_DATE_RECORDED,
       additionalInformation = AdditionalInformation(
         userId = userAccount.user.userId!!,
-        legacyStaffId = userDetails.staffId,
+        legacyStaffId = userAccount.user.legacyStaffId,
         username = userAccount.username,
       ),
     )

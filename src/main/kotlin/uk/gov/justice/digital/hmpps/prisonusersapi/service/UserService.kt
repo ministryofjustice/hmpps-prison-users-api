@@ -101,7 +101,7 @@ class UserService(
     }
   }
 
-  fun recordLogonDate(username: String): Pair<UserDetails, UserAccount> {
+  fun recordLogonDate(username: String): UserAccount {
     val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
       .orElseThrow(UserNotFoundException("User $username not found"))
     return syncLockTemplate.execute(legacyStaffId) {
@@ -110,7 +110,7 @@ class UserService(
         .orElseThrow(UserNotFoundException("User $username not found"))
       userAccount.lastLoggedIn = LocalDateTime.now(clock)
       userAccountRepository.save(userAccount)
-      Pair(createUserDetails(userAccount), userAccount)
+      userAccount
     }
   }
 
