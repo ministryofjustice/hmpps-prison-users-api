@@ -662,6 +662,8 @@ class UserManagementResourceIntTest(
       fun `updates last login and publishes the domain event`() {
         val originalAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
         assertThat(originalAccount.lastLoggedIn).isEqualTo(previousLogon)
+        assertThat(originalAccount.modifiedBy).isNull()
+        assertThat(originalAccount.modifiedTimestamp).isNull()
         val userId = originalAccount.user.userId
 
         webTestClient.post().uri("/users/marco.rossi/record-sign-in")
@@ -670,7 +672,10 @@ class UserManagementResourceIntTest(
           .expectStatus().isOk
           .expectBody().isEmpty
 
-        assertThat(userAccountRepository.findById("marco.rossi").orElseThrow().lastLoggedIn).isEqualTo(FIXED_TIME)
+        val updatedAccount = userAccountRepository.findById("marco.rossi").orElseThrow()
+        assertThat(updatedAccount.lastLoggedIn).isEqualTo(FIXED_TIME)
+        assertThat(updatedAccount.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.modifiedTimestamp).isEqualTo(FIXED_TIME)
         val event = getDomainEvents().single()
         assertThat(event.eventType).isEqualTo("prison-users.user.logon.date.recorded")
         assertThat(event.version).isEqualTo(1)
@@ -691,6 +696,8 @@ class UserManagementResourceIntTest(
             .buildAndSave()
         }
         assertThat(account.lastLoggedIn).isNull()
+        assertThat(account.modifiedBy).isNull()
+        assertThat(account.modifiedTimestamp).isNull()
 
         webTestClient.post().uri("/users/$username/record-sign-in")
           .headers(setAuthorisation(roles = listOf("ROLE_MANAGE_NOMIS_USER_ACCOUNT")))
@@ -698,7 +705,10 @@ class UserManagementResourceIntTest(
           .expectStatus().isOk
           .expectBody().isEmpty
 
-        assertThat(userAccountRepository.findById(username).orElseThrow().lastLoggedIn).isEqualTo(FIXED_TIME)
+        val updatedAccount = userAccountRepository.findById(username).orElseThrow()
+        assertThat(updatedAccount.lastLoggedIn).isEqualTo(FIXED_TIME)
+        assertThat(updatedAccount.modifiedBy).isEqualTo("AUTH_ADM")
+        assertThat(updatedAccount.modifiedTimestamp).isEqualTo(FIXED_TIME)
         val event = getDomainEvents().single()
         assertThat(event.eventType).isEqualTo("prison-users.user.logon.date.recorded")
         assertThat(event.additionalInformation?.userId).isEqualTo(account.user.userId)

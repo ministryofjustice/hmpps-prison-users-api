@@ -108,9 +108,7 @@ class UserService(
       val userAccount = userAccountRepository.findById(username)
         .filter { it.user.legacyStaffId == legacyStaffId }
         .orElseThrow(UserNotFoundException("User $username not found"))
-      userAccount.lastLoggedIn = LocalDateTime.now(clock)
-      userAccountRepository.save(userAccount)
-      userAccount
+      updateLastLoggedIn(userAccount)
     }
   }
 
@@ -141,6 +139,14 @@ class UserService(
     userAccount.user.modifiedTimestamp = LocalDateTime.now(clock)
     usersRepository.save(userAccount.user)
     return createUserDetails(userAccount)
+  }
+
+  private fun updateLastLoggedIn(userAccount: UserAccount): UserAccount {
+    val now = LocalDateTime.now(clock)
+    userAccount.lastLoggedIn = now
+    userAccount.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.modifiedTimestamp = now
+    return userAccountRepository.save(userAccount)
   }
 
   private fun unlockUserAccount(userAccount: UserAccount): UserAccount {
