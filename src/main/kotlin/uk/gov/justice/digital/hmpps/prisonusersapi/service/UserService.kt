@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.prisonusersapi.service
 
 import org.slf4j.LoggerFactory
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.AccountStatus
@@ -13,6 +14,7 @@ import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserDetails
 import uk.gov.justice.digital.hmpps.prisonusersapi.data.UserStatus
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserAccount
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.UserEmail
+import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.CaseloadRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserAccountRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UserCaseloadMemberRepository
 import uk.gov.justice.digital.hmpps.prisonusersapi.jpa.repository.UsersRepository
@@ -32,6 +34,7 @@ class UserService(
   private val userAccountRepository: UserAccountRepository,
   private val syncLockTemplate: SyncLockTemplate,
   private val userCaseloadMemberRepository: UserCaseloadMemberRepository,
+  private val caseloadRepository: CaseloadRepository,
   private val clock: Clock,
   private val hmppsAuthenticationHolder: HmppsAuthenticationHolder,
 ) {
@@ -110,6 +113,27 @@ class UserService(
         .orElseThrow(UserNotFoundException("User $username not found"))
       updateLastLoggedIn(userAccount)
     }
+  }
+
+  fun setActiveCaseload(username: String, defaultCaseloadId: String): Pair<UserAccountCaseloadDetail, UserAccount> {
+    val legacyStaffId = userAccountRepository.findLegacyStaffIdByUsername(username)
+      .orElseThrow(UserNotFoundException("User $username not found"))
+    return syncLockTemplate.execute(legacyStaffId) {
+      val userAccount = userAccountRepository.findById(username)
+        .filter { it.user.legacyStaffId == legacyStaffId }
+        .orElseThrow(UserNotFoundException("User $username not found"))
+      updateActiveCaseload(userAccount, defaultCaseloadId)
+      Pair(userAccount.toUserAccountCaseloadDetail(), userAccount)
+    }
+  }
+
+  private fun updateActiveCaseload(userAccount: UserAccount, defaultCaseloadId: String): UserAccount {
+    val defaultCaseload = caseloadRepository.findByIdOrNull(defaultCaseloadId)
+      ?: throw CaseloadNotFoundException("Caseload $defaultCaseloadId not found")
+    userAccount.activeCaseload = defaultCaseload
+    userAccount.modifiedBy = hmppsAuthenticationHolder.principal
+    userAccount.modifiedTimestamp = LocalDateTime.now(clock)
+    return userAccountRepository.save(userAccount)
   }
 
   private fun updateUserEmail(userAccount: UserAccount, email: String): UserDetails {

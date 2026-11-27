@@ -93,7 +93,7 @@ data class UserAccount(
   @OneToOne(optional = true)
   @JoinColumn(name = "active_caseload_id")
   @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
-  val activeCaseload: Caseload? = null,
+  var activeCaseload: Caseload? = null,
 
   @OneToMany(mappedBy = "userAccount", cascade = [CascadeType.ALL], orphanRemoval = true)
   @NotAudited

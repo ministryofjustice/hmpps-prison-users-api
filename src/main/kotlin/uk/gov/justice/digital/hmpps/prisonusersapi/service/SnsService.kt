@@ -106,4 +106,8 @@ enum class PrisonUserDomainEventType(
     "prison-users.user.logon.date.recorded",
     "Prison user logon date has been recorded",
   ),
+  USER_ACCOUNT_ACTIVE_CASELOAD_UPDATED(
+    "prison-users.user.active.caseload.updated",
+    "Prison user active caseload has been updated",
+  ),
 }
